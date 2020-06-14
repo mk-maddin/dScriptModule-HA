@@ -1,0 +1,8 @@
+{
+  "domain": "dScriptModule",
+  "name": "robot-electronics dScript modules",
+  "documentation": "https://www.home-assistant.io/components/dScriptModule",
+  "dependencies": ["light","cover","switch"],
+  "codeowners": ["@mk-maddin"],
+  "requirements": []
+}
