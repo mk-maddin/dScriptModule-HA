@@ -20,7 +20,7 @@ import homeassistant.helpers.config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORTED_DOMAINS = ["light", "switch", "cover"]
+SUPPORTED_DOMAINS = ["light", "switch", "cover", "sensor"]
 DOMAIN = 'dScriptModule'
 
 CONF_AESKEY='aes_key'
@@ -146,12 +146,15 @@ def setup(hass, config):
         oLights=dSBoard._ConnectedLights
         oShutters=dSBoard._ConnectedShutters
         oSwitches=dSBoard._ConnectedSockets
+        oMotionSensors=dSBoard._ConnectedMotionSensors
         dSBoard.GetConfig()
         if not oLights == dSBoard._ConnectedLights:
             discovery.load_platform(hass, 'light', DOMAIN, {}, config)
         if not oShutters == dSBoard._ConnectedShutters:
             discovery.load_platform(hass, 'cover', DOMAIN, {}, config)
         if not oSwitches == dSBoard._ConnectedSockets:
+            discovery.load_platform(hass, 'switch', DOMAIN, {}, config)
+        if not oMotionSensors == dSBoard._ConnectedMotionSensors:
             discovery.load_platform(hass, 'switch', DOMAIN, {}, config)
 
     def dSBoardHeartbeat(sender, event):
@@ -196,6 +199,7 @@ def setup(hass, config):
             hass.data[DATA_SERVER].addEventHandler('getlight',dSBoardDeviceUpdate)
             hass.data[DATA_SERVER].addEventHandler('getsocket',dSBoardDeviceUpdate)
             hass.data[DATA_SERVER].addEventHandler('getshutter',dSBoardDeviceUpdate)
+            hass.data[DATA_SERVER].addEventHandler('getmotion',dSBoardDeviceUpdate)
 
             # register server on home assistant start & stop events so it is available when HA starts
             hass.bus.listen_once(EVENT_HOMEASSISTANT_START, dSServerStart)

@@ -122,7 +122,7 @@ class dScriptCover(CoverEntity):
     
     def update_push(self):
         """Get the latest status from device after an update was pushed"""
-        #_LOGGER.debug("%s: update push %s", self._board._HostName, self._name)
+        _LOGGER.debug("%s: update push %s", self._board._HostName, self._name)
         stateObject=self.hass.states.get(self.entity_id)
         attributesObject=stateObject.attributes.copy()
         state=self._board.GetShutter(self._identifier)
@@ -133,7 +133,7 @@ class dScriptCover(CoverEntity):
     
     def update(self): #This function is automatically triggered for local_pull integrations
         """Get latest data and states from the device."""
-        #_LOGGER.debug("%s: update %s", self._board._HostName, self._name)
+        _LOGGER.debug("%s: update %s", self._board._HostName, self._name)
         if self.is_opening or self.is_closing:
             self.update_pull() #If device is currently opening/closing keep status "more" up-to-date
             return

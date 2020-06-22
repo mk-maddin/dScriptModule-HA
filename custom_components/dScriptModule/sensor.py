@@ -1,7 +1,12 @@
-"""Support for dScriptModule light devices."""
+"""Support for abfallio sensor devices."""
 import logging
-import requests
-from homeassistant.components.light import LightEntity
+from datetime import datetime
+from homeassistant.helpers.entity import Entity
+from homeassistant.components.binary_sensor import DEVICE_CLASS_MOTION
+from homeassistant.const import (
+    STATE_ON,
+    STATE_OFF,
+)
 from . import (
         DATA_BOARDS, 
         DATA_DEVICES, 
@@ -12,35 +17,36 @@ from . import (
 _LOGGER = logging.getLogger(__name__)
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the dScriptModule light platform."""
-    domain='light'
+    """Set up the dScriptModule switch platform."""
+    domain='sensor'
     devices=[]
     for dSBoard in hass.data[DATA_BOARDS]:
         if not dSBoard._CustomFirmeware:
-            continue    # If the board does not run custom firmeware we cannot identify a 'cover' - treate all as switch
+            continue    # If the board does not run custom firmeware we cannot identify a motion sensor.
         i=0
-        _LOGGER.debug("%s: Setup %s %s for board", dSBoard._HostName, dSBoard._ConnectedLights, domain)
-        while i < dSBoard._ConnectedLights:
+        _LOGGER.debug("%s: Setup %s %s for board", dSBoard._HostName, dSBoard._ConnectedMotionSensors, domain)
+        while i < dSBoard._ConnectedMotionSensors:
             i += 1
-            if getdSDeviceByID(hass, dSBoard.IP, i, 'getlight'):
+            if getdSDeviceByID(hass, dSBoard.IP, i, 'getmotion'):
                 continue # If the device already exists do not recreate
-            device=dScriptLight(dSBoard,i)
+            device=dScriptMotionSensor(dSBoard,i)
             hass.data[DATA_DEVICES].append(device)
             devices.append(device)
     add_entities(devices)
 
-class dScriptLight(LightEntity):
-    """The light class for dScriptModule lights."""
-    _topic = 'getlight'
+class dScriptMotionSensor(Entity):
+    """The sensor class for dScriptModule motion sensors."""
+    _topic = 'getmotion'
 
     def __init__(self, board, identifier):
-        """Initialize the light."""
+        """Initialize the sensor."""
         self._identifier = identifier
         self._board = board
-        self._name = self._board._HostName + "_Light" + str(self._identifier)
         self._state = None
-        self._brightness = None
-        _LOGGER.debug("%s: Initialized light: %s", self._board._HostName, self._name)
+        self._device_class = DEVICE_CLASS_MOTION
+        #self._icon = 'mdi:motion-sensor'
+        self._name = self._board._HostName + "_Motion" + str(self._identifier)
+        _LOGGER.debug("%s: Initialized sensor: %s", self._board._HostName, self._name)
         self.update_pull()
 
     @property
@@ -51,39 +57,42 @@ class dScriptLight(LightEntity):
     @property
     def available(self):
         """Return True if entity is available."""
-        if self._board._ConnectedLights < self._identifier:
+        if self._board._ConnectedMotionSensors < self._identifier:
             return False
         return True
+
+#    @property
+#    def icon(self):
+#        return self._icon
+
+    @property
+    def device_class(self):
+        """Return the device_class of the device."""
+        return self._device_class
 
     @property
     def is_on(self):
         """Return true if entity is on."""
-        #_LOGGER.debug("%s: is_on: %s", self._board._HostName, self._name)
+        _LOGGER.debug("%s: is_on: %s", self._board._HostName, self._name)
         return self._state
 
-    def turn_on(self, **kwargs):
-        """Turn the light on."""
-        _LOGGER.debug("%s: turn_on: %s", self._board._HostName, self._name)
-        self._board.SetLight(self._identifier,'on')
+    @property
+    def state(self):
+        return self._state
 
-    def turn_off(self, **kwargs):
-        """Turn the light off."""
-        _LOGGER.debug("%s: turn_off: %s", self._board._HostName, self._name)
-        self._board.SetLight(self._identifier,'off')
-    
     def _update_state(self,state):
         """Sets the object status according to the state result"""
         if state == 'on':
-            self._state = True
+            self._state = STATE_ON
         elif state == 'off':
-            self._state = False
+            self._state = STATE_OFF
         else:
             _LOGGER.warning("%s: invalid state update: %s is %s", self._board._HostName, self._name, state)
 
     def update_pull(self):
         """Pull the latest status from device"""
         _LOGGER.debug("%s: update pull %s", self._board._HostName, self._name)
-        state=self._board.GetLight(self._identifier)
+        state=self._board.GetMotion(self._identifier)
         self._update_state(state)
         _LOGGER.debug("%s: update pull complete %s", self._board._HostName, self._name)
 
@@ -92,10 +101,10 @@ class dScriptLight(LightEntity):
         _LOGGER.debug("%s: update push %s", self._board._HostName, self._name)
         stateObject=self.hass.states.get(self.entity_id)
         attributesObject=stateObject.attributes.copy()
-        state=self._board.GetLight(self._identifier)
+        state=self._board.GetMotion(self._identifier)
         self._update_state(state)
         self.hass.states.set(self.entity_id,state,attributesObject)
-        _LOGGER.debug("%s: update push complete %s (%s | %s)", self._board._HostName, self.entity_id, state, attributesObject)
+        _LOGGER.debug("%s: update push complete %s", self._board._HostName, self.entity_id)
 
     def update(self): #This function is automatically triggered for local_pull integrations
         """Get latest data and states from the device."""

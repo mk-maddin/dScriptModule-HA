@@ -42,8 +42,10 @@ class dScriptSwitch(SwitchEntity):
         self._state = None
         if self._board._CustomFirmeware:
            self._name = self._board._HostName + "_Socket" + str(self._identifier)
+           self._icon = 'mdi:power-socket-de'
         else:
             self._name = self._board._HostName + "_Relay" + str(self._identifier)
+            self._icon = None
         self.update_pull()
         _LOGGER.debug("%s: Initialized switch: %s", self._board._HostName, self._name)
 
@@ -65,14 +67,12 @@ class dScriptSwitch(SwitchEntity):
 
     @property
     def icon(self):
-        """Return the icon."""
-        if self._board._CustomFirmeware:
-            return 'mdi:power-socket-de'
+        return self._icon
 
     @property
     def is_on(self):
-        """Return true if the switch is on."""
-        #_LOGGER.debug("%s: is_on: %s", self._board._HostName, self._name)
+        """Return true if entity is on."""
+        _LOGGER.debug("%s: is_on: %s", self._board._HostName, self._name)
         return self._state
 
     def turn_on(self, **kwargs):
@@ -113,7 +113,7 @@ class dScriptSwitch(SwitchEntity):
 
     def update(self): #This function is automatically triggered for local_pull integrations
         """Get latest data and states from the device."""
-        #_LOGGER.debug("%s: update %s", self._board._HostName, self._name)
+        _LOGGER.debug("%s: update %s", self._board._HostName, self._name)
         if self._board._CustomFirmeware and self.hass.data[DATA_SERVER]:
             # If the board has a custom firmware and a server component is defined, update it via local_push, not local_pull
             return
