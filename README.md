@@ -9,12 +9,14 @@ The [dScriptModule python module](https://github.com/mk-maddin/dScriptModule-PyP
 
 Allows for control of dScript boards (by Robot-Electronics / Devantech Ltd.) via home assistant with the following features:
 
-- automatic discover of conneted lights / switches / covers
+- automatic discover of conneted lights / switches / covers / motion sensor / buttons
 - light on/off
 - switch on/off
 - covers
   - up / down
   - set to specific level
+- motion sensor
+- button sensor (with multi click support)
 - automatic update
 
 # Installation and Configuration

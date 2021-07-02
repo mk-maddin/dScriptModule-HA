@@ -1,8 +1,9 @@
 {
   "domain": "dScriptModule",
   "name": "robot-electronics dScript modules",
-  "documentation": "https://www.home-assistant.io/components/dScriptModule",
+  "version": "2.4",
+  "documentation": "https://github.com/mk-maddin/dScriptModule-HA",
   "dependencies": ["light","cover","switch", "sensor", "binary_sensor"],
   "codeowners": ["@mk-maddin"],
-  "requirements": ["dScriptModule==2.1.0"]
+  "requirements": ["dScriptModule==2.4.0"]
 }

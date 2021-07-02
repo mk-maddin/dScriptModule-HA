@@ -147,6 +147,7 @@ def setup(hass, config):
         oShutters=dSBoard._ConnectedShutters
         oSwitches=dSBoard._ConnectedSockets
         oMotionSensors=dSBoard._ConnectedMotionSensors
+        oButtons=dSBoard._ConnectedButtons
         dSBoard.GetConfig()
         if not oLights == dSBoard._ConnectedLights:
             discovery.load_platform(hass, 'light', DOMAIN, {}, config)
@@ -154,8 +155,8 @@ def setup(hass, config):
             discovery.load_platform(hass, 'cover', DOMAIN, {}, config)
         if not oSwitches == dSBoard._ConnectedSockets:
             discovery.load_platform(hass, 'switch', DOMAIN, {}, config)
-        if not oMotionSensors == dSBoard._ConnectedMotionSensors:
-            discovery.load_platform(hass, 'switch', DOMAIN, {}, config)
+        if not oMotionSensors == dSBoard._ConnectedMotionSensors or not oButtons == dSBoard._ConnectedButtons:
+            discovery.load_platform(hass, 'sensor', DOMAIN, {}, config)
 
     def dSBoardHeartbeat(sender, event):
         """Handle incoming hearbeat connection of any board"""
@@ -200,6 +201,7 @@ def setup(hass, config):
             hass.data[DATA_SERVER].addEventHandler('getsocket',dSBoardDeviceUpdate)
             hass.data[DATA_SERVER].addEventHandler('getshutter',dSBoardDeviceUpdate)
             hass.data[DATA_SERVER].addEventHandler('getmotion',dSBoardDeviceUpdate)
+            hass.data[DATA_SERVER].addEventHandler('getbutton',dSBoardDeviceUpdate)
 
             # register server on home assistant start & stop events so it is available when HA starts
             hass.bus.listen_once(EVENT_HOMEASSISTANT_START, dSServerStart)
