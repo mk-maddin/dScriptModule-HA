@@ -1,0 +1,9 @@
+{
+  "domain": "dScriptModule",
+  "name": "robot-electronics dScript modules",
+  "version": "2.7",
+  "documentation": "https://github.com/mk-maddin/dScriptModule-HA",
+  "dependencies": ["light","cover","switch", "sensor", "binary_sensor"],
+  "codeowners": ["@mk-maddin"],
+  "requirements": ["dScriptModule==2.4.0"]
+}
