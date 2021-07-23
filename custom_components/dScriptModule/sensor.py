@@ -22,9 +22,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     domain='sensor'
     devices=[]
     for dSBoard in hass.data[DATA_BOARDS]:
-        device=dScriptBoardSensor(dSBoard)
-        hass.data[DATA_DEVICES].append(device)
-        devices.append(device)
+        #device=dScriptBoardSensor(dSBoard)
+        #hass.data[DATA_DEVICES].append(device)
+        #devices.append(device)
 	
         if dSBoard._CustomFirmeware:
             continue    # If the board does not run custom firmeware we cannot identify a motion sensor.
