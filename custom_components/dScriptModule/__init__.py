@@ -6,10 +6,13 @@ import voluptuous as vol
 
 from homeassistant.const import (
     CONF_DEVICES,
+    CONF_DISCOVERY,
+    CONF_ENTITIES,
     CONF_HOST,
+    CONF_MAC,
+    CONF_NAME,
     CONF_PORT,
     CONF_PROTOCOL,
-    CONF_DISCOVERY,
     EVENT_HOMEASSISTANT_STOP,
     EVENT_HOMEASSISTANT_START,
     STATE_ON,
@@ -53,6 +56,17 @@ CONFIG_SCHEMA = vol.Schema(
                         )
                     ],
                 ),
+                vol.Optional(CONF_ENTITIES): vol.All(
+                    cv.ensure_list,
+                    [
+                        vol.Schema(
+                            {
+                                vol.Required(CONF_MAC): cv.string,
+                                vol.Required(CONF_NAME): cv.string,
+                            }
+                        )
+                    ],
+                ),
                 vol.Optional(CONF_SERVER): vol.Schema(
                     {
                         vol.Required(CONF_ENABLED): cv.boolean,
@@ -68,6 +82,10 @@ CONFIG_SCHEMA = vol.Schema(
     },
     extra=vol.ALLOW_EXTRA,
 )
+
+class dScriptBoardHA(dScriptBoard):
+    """For HA adjusted class of the dScriptBoard"""
+    friendlyname=None
 
 def getdSDeviceByID(hass, dSBoardIP, identifier, topic):
     """Gets a dSDevice from list by poviding its dSBoard, topic and identifier"""
@@ -97,14 +115,15 @@ def setup(hass, config):
         _LOGGER.debug("dSBoardConnect: Setup board: %s", host)
 
         try:
-            dSBoard = dScriptBoard(TCP_IP=host, TCP_PORT=port, PROTOCOL=protocol)
+            #dSBoard = dScriptBoard(TCP_IP=host, TCP_PORT=port, PROTOCOL=protocol)
+            dSBoard = dScriptBoardHA(TCP_IP=host, TCP_PORT=port, PROTOCOL=protocol)
             if len(aeskey) > 0:
                 dSBoard.SetAESKey(aeskey)
         except:
             _LOGGER.warning("dSBoardConnect: Creation of dScriptBoard %s failed", host)
             _LOGGER.warning("dSBoardConnect: If using an AESKey verify it is exactly 32 characters long")
             return False
-                    
+        
         try:
             _LOGGER.debug("dSBoardConnect: %s: PRE-init board (%s)", dSBoard._HostName, dSBoard._Protocol)
             dSBoard.InitBoard()
@@ -116,6 +135,22 @@ def setup(hass, config):
         except:
             _LOGGER.warning("dSBoardConnect: %s: Initialization of board failed", host)
             return False
+
+        try:
+            _LOGGER.debug("dSBoardConnect: %s: Setting friendly name", dSBoard._HostName)
+            dSBoard.friendlyname = dSBoard._HostName
+            manual_entities = config[DOMAIN].get(CONF_ENTITIES)
+            if not manual_entities == None:
+                for entity in manual_entities:
+                    for att in dir(entity):
+                        if entity[CONF_MAC] == dSBoard._MACAddress:
+                            dSBoard.friendlyname = entity[CONF_NAME]
+                            _LOGGER.debug("dSBoardConnect: %s: Using manual friendly name", dSBoard._HostName)
+                            break
+            _LOGGER.debug("dSBoardConnect: %s: MAC: %s | FriendlyName %s", dSBoard._HostName, dSBoard._MACAddress, dSBoard.friendlyname)
+        except:
+            _LOGGER.warning("dSBoardConnect: %s: Could not set friendly name (%s)", dSBoard._HostName, dSBoard.friendlyname)
+
         hass.data[DATA_BOARDS].append(dSBoard)
         return True
 
@@ -169,7 +204,7 @@ def setup(hass, config):
             _LOGGER.debug("dSBoardHearbeat: HeartBeat of known board: %s", dSBoard._HostName)
             if dSBoard._CustomFirmeware:
                 dSBoardGetConfig(sender, event)        
-    
+
     def dSBoardDeviceUpdate(sender, event):
         """Perform the update action for specified device if device trigger was received"""
         #_LOGGER.debug("dSBoardDeviceUpdate: handle event")
@@ -178,6 +213,12 @@ def setup(hass, config):
             _LOGGER.debug("dSBoardDeviceUpdate: Push device update: %s -> %s", dSDevice.entity_id, sender.value)
             dSDevice.update_push() # check if in future we can get data directly from "sender.value" and give that to update_push(sender.value)
 
+    def handle_dSServerRestart(call):
+        """Handle service call for dSServer restart"""
+        _LOGGER.debug("handle_dSServerRestart: init restart")
+        dSServerStop(call)
+        dSServerStart(call)
+	
     # Setup all dScript devices defined within configuration.yaml
     _LOGGER.info("Setup %s devices", DOMAIN)
     hass.data[DATA_BOARDS] = []
@@ -193,6 +234,8 @@ def setup(hass, config):
         _LOGGER.info("Setup %s server", DOMAIN)
         try:
             hass.data[DATA_SERVER] = dScriptServer(dSSrvConf.get(CONF_LISTENIP),dSSrvConf.get(CONF_PORT),dSSrvConf.get(CONF_PROTOCOL))
+            
+            _LOGGER.debug("Register dScriptServer event handlers")
             if len(dSSrvConf.get(CONF_AESKEY)) > 0:
                 hass.data[DATA_SERVER].SetAESKey(dSSrvConf.get(CONF_AESKEY))
             hass.data[DATA_SERVER].addEventHandler('heartbeat',dSBoardHeartbeat)
@@ -203,7 +246,12 @@ def setup(hass, config):
             hass.data[DATA_SERVER].addEventHandler('getmotion',dSBoardDeviceUpdate)
             hass.data[DATA_SERVER].addEventHandler('getbutton',dSBoardDeviceUpdate)
 
+            # Register service to restart dScriptServer
+            _LOGGER.debug("Register services for dScriptServer")
+            hass.services.register(DOMAIN, "dSServerRestart", handle_dSServerRestart)
+			
             # register server on home assistant start & stop events so it is available when HA starts
+            _LOGGER.debug("Register dScriptServer to start/stop with home assistant")
             hass.bus.listen_once(EVENT_HOMEASSISTANT_START, dSServerStart)
             hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, dSServerStop)
         except:

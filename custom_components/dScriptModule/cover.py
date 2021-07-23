@@ -41,7 +41,7 @@ class dScriptCover(CoverEntity):
         """Initialize the cover."""
         self._identifier = identifier
         self._board = board
-        self._name = self._board._HostName + "_Cover" + str(self._identifier)
+        self._name = self._board.friendlyname + "_Cover" + str(self._identifier)
         self._current_cover_position = None
         self._state = None
         _LOGGER.debug("%s: Initialized cover: %s", self._board._HostName, self._name)

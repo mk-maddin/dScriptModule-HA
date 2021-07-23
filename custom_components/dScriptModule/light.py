@@ -37,7 +37,7 @@ class dScriptLight(LightEntity):
         """Initialize the light."""
         self._identifier = identifier
         self._board = board
-        self._name = self._board._HostName + "_Light" + str(self._identifier)
+        self._name = self._board.friendlyname + "_Light" + str(self._identifier)
         self._state = None
         self._brightness = None
         _LOGGER.debug("%s: Initialized light: %s", self._board._HostName, self._name)

@@ -41,10 +41,10 @@ class dScriptSwitch(SwitchEntity):
         self._board = board
         self._state = None
         if self._board._CustomFirmeware:
-           self._name = self._board._HostName + "_Socket" + str(self._identifier)
+           self._name = self._board.friendlyname + "_Socket" + str(self._identifier)
            self._icon = 'mdi:power-socket-de'
         else:
-            self._name = self._board._HostName + "_Relay" + str(self._identifier)
+            self._name = self._board.friendlyname + "_Relay" + str(self._identifier)
             self._icon = None
         self.update_pull()
         _LOGGER.debug("%s: Initialized switch: %s", self._board._HostName, self._name)
