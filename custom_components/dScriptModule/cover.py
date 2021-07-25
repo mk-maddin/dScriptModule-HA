@@ -20,17 +20,24 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     domain='cover'
     devices=[]
     for dSBoard in hass.data[DATA_BOARDS]:
+
         if not dSBoard._CustomFirmeware:
             continue    # If the board does not run custom firmeware we cannot identify a 'cover' - treate all as switch
+
         i=0
-        _LOGGER.debug("%s: Setup %s %s for board", dSBoard._HostName, dSBoard._ConnectedShutters, domain)
+        _LOGGER.debug("%s: Create %s %s for board", dSBoard.friendlyname, dSBoard._ConnectedShutters, domain)
         while i < dSBoard._ConnectedShutters:
-            i += 1
-            if getdSDeviceByID(hass, dSBoard.IP, i, 'getshutter'):
-                continue # If the device already exists do not recreate
-            device=dScriptCover(dSBoard,i)
-            hass.data[DATA_DEVICES].append(device)
-            devices.append(device)
+            try:
+                i += 1
+                if getdSDeviceByID(hass, dSBoard.IP, i, 'getshutter'):
+                    continue # If the device already exists do not recreate
+                device=dScriptCover(dSBoard,i)
+                hass.data[DATA_DEVICES].append(device)
+                devices.append(device)
+            except Exception as e:
+                _LOGGER.error("%s: Creation of %s %s failed: %s", dSBoard.friendlyname, domain, i, str(e))
+
+    _LOGGER.info("%s: Prepared setup for %s %s devices", dSBoard.friendlyname, len(devices), domain)
     add_entities(devices)
 
 class dScriptCover(CoverEntity):
@@ -44,7 +51,7 @@ class dScriptCover(CoverEntity):
         self._name = self._board.friendlyname + "_Cover" + str(self._identifier)
         self._current_cover_position = None
         self._state = None
-        _LOGGER.debug("%s: Initialized cover: %s", self._board._HostName, self._name)
+        _LOGGER.debug("%s: Initialized cover: %s", self._board.friendlyname, self._name)
         self.update_pull()
 
     @property
@@ -115,25 +122,31 @@ class dScriptCover(CoverEntity):
     
     def update_pull(self):
         """Pull the latest status from device"""
-        _LOGGER.debug("%s: update pull %s", self._board._HostName, self._name)
-        state=self._board.GetShutter(self._identifier)
-        self._update_state(state)
-        _LOGGER.debug("%s: update pull complete %s", self._board._HostName, self._name)
-    
+        try:
+            _LOGGER.debug("%s: update pull %s", self._board.friendlyname, self._name)
+            state=self._board.GetShutter(self._identifier)
+            self._update_state(state)
+            _LOGGER.debug("%s: update pull complete %s", self._board.friendlyname, self.entity_id)
+        except Exception as e:
+            _LOGGER.warning("%s: update pull failed %s: %s", self._board.friendlyname, self.entity_id, str(e))
+
     def update_push(self):
         """Get the latest status from device after an update was pushed"""
-        _LOGGER.debug("%s: update push %s", self._board._HostName, self._name)
-        stateObject=self.hass.states.get(self.entity_id)
-        attributesObject=stateObject.attributes.copy()
-        state=self._board.GetShutter(self._identifier)
-        self._update_state(state)
-        attributesObject[ATTR_CURRENT_POSITION] = state[0]
-        self.hass.states.set(self.entity_id,state[1],attributesObject)
-        _LOGGER.debug("%s: update push complete %s (%s | %s)", self._board._HostName, self.entity_id, state, attributesObject)
-    
+        try:
+            _LOGGER.debug("%s: update push %s", self._board.friendlyname, self._name)
+            stateObject=self.hass.states.get(self.entity_id)
+            attributesObject=stateObject.attributes.copy()
+            state=self._board.GetShutter(self._identifier)
+            self._update_state(state)
+            attributesObject[ATTR_CURRENT_POSITION] = state[0]
+            self.hass.states.set(self.entity_id,state[1],attributesObject)
+            _LOGGER.debug("%s: update push complete %s (%s | %s)", self._board.friendlyname, self.entity_id, state, attributesObject)
+        except Exception as e:
+            _LOGGER.warning("%s: update push failed %s: %s", self._board.friendlyname, self.entity_id, str(e))
+
     def update(self): #This function is automatically triggered for local_pull integrations
         """Get latest data and states from the device."""
-        _LOGGER.debug("%s: update %s", self._board._HostName, self._name)
+        _LOGGER.debug("%s: update %s", self._board.friendlyname, self._name)
         if self.is_opening or self.is_closing:
             self.update_pull() #If device is currently opening/closing keep status "more" up-to-date
             return

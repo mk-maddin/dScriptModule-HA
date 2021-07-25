@@ -24,7 +24,7 @@ import homeassistant.helpers.config_validation as cv
 _LOGGER = logging.getLogger(__name__)
 
 SUPPORTED_DOMAINS = ["light", "switch", "cover", "sensor"]
-DOMAIN = 'dScriptModule'
+DOMAIN = 'dscriptmodule'
 
 CONF_AESKEY='aes_key'
 CONF_SERVER='server'
@@ -35,9 +35,12 @@ DEFAULT_PORT=17123
 DEFAULT_PROTOCOL="binary"
 DEFAULT_AESKEY=""
 
-DATA_DEVICES=DOMAIN + "_Devices"
-DATA_BOARDS=DOMAIN + "_Boards"
-DATA_SERVER=DOMAIN + "_Server"
+DATA_DEVICES=DOMAIN + "_devices"
+DATA_BOARDS=DOMAIN + "_boards"
+DATA_SERVER=DOMAIN + "_server"
+
+CATTR_FW_VERSION= "firmware"
+CATTR_SW_TYPE= "custom_app"
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -106,7 +109,14 @@ def setup(hass, config):
             if dSBoard.IP == host:
                 return dSBoard
         return False
-    
+
+    def getdSBoardByMAC(mac):
+        """Get a board from the board list by its MAC"""
+        for dSBoard in hass.data[DATA_BOARDS]:
+            if dSBoard._MACAddress == mac:
+                return dSBoard
+        return False
+
     def dSBoardSetup(host, port=DEFAULT_PORT, protocol=DEFAULT_PROTOCOL, aeskey=DEFAULT_AESKEY):
         """Connect to a new dScriptBoard"""
         if getdSBoardByIP(host): 
@@ -119,22 +129,24 @@ def setup(hass, config):
             dSBoard = dScriptBoardHA(TCP_IP=host, TCP_PORT=port, PROTOCOL=protocol)
             if len(aeskey) > 0:
                 dSBoard.SetAESKey(aeskey)
-        except:
-            _LOGGER.warning("dSBoardConnect: Creation of dScriptBoard %s failed", host)
+        except Exception as e:
+            _LOGGER.error("dSBoardConnect: Creation of dScriptBoard %s failed: %s", host, str(e))
             _LOGGER.warning("dSBoardConnect: If using an AESKey verify it is exactly 32 characters long")
             return False
-        
+
         try:
             _LOGGER.debug("dSBoardConnect: %s: PRE-init board (%s)", dSBoard._HostName, dSBoard._Protocol)
             dSBoard.InitBoard()
-            #dSBoard.GetStatus()
-            #dSBoard.GetConfig()
             _LOGGER.info("dSBoardConnect: %s: Initialized board %s (%s)", dSBoard._HostName, dSBoard._ModuleID, dSBoard._Protocol)
-            _LOGGER.debug("dSBoardConnect: %s: Firmware: %s.%s | App: %s.%s | Custom: %s", 
-                    dSBoard._HostName, dSBoard._SystemFirmwareMajor, dSBoard._SystemFirmwareMinor, dSBoard._ApplicationFirmwareMajor, dSBoard._ApplicationFirmwareMinor, dSBoard._CustomFirmeware)
-        except:
-            _LOGGER.warning("dSBoardConnect: %s: Initialization of board failed", host)
+            _LOGGER.debug("dSBoardConnect: %s: Firmware: %s.%s | App: %s.%s | Custom: %s | MAC: %s | IP: %s", 
+                dSBoard._HostName, dSBoard._SystemFirmwareMajor, dSBoard._SystemFirmwareMinor, dSBoard._ApplicationFirmwareMajor, dSBoard._ApplicationFirmwareMinor, dSBoard._CustomFirmeware, dSBoard._MACAddress, dSBoard.IP)
+        except Exception as e:
+            _LOGGER.error("dSBoardConnect: %s: Initialization of board failed: %s", host, str(e))
             return False
+
+#        if getdSBoardByMac(dSBoard._MACAddress):
+#            _LOGGER.debug("dSBoardConnect: Board with same MAC %s is already setup: %s", dSBoard._MACAddress, dSBoard._HostName)
+#            return True
 
         try:
             _LOGGER.debug("dSBoardConnect: %s: Setting friendly name", dSBoard._HostName)
@@ -143,33 +155,39 @@ def setup(hass, config):
             if not manual_entities == None:
                 for entity in manual_entities:
                     for att in dir(entity):
-                        if entity[CONF_MAC] == dSBoard._MACAddress:
+                        if entity[CONF_MAC].lower() == dSBoard._MACAddress.lower():
                             dSBoard.friendlyname = entity[CONF_NAME]
-                            _LOGGER.debug("dSBoardConnect: %s: Using manual friendly name", dSBoard._HostName)
                             break
             _LOGGER.debug("dSBoardConnect: %s: MAC: %s | FriendlyName %s", dSBoard._HostName, dSBoard._MACAddress, dSBoard.friendlyname)
         except:
-            _LOGGER.warning("dSBoardConnect: %s: Could not set friendly name (%s)", dSBoard._HostName, dSBoard.friendlyname)
+            _LOGGER.error("dSBoardConnect: %s: Could not set friendly name (%s)", dSBoard._HostName, dSBoard.friendlyname)
+            return False
 
         hass.data[DATA_BOARDS].append(dSBoard)
         return True
 
     def dSServerStart(event):
         """Start the dScriptServer instance"""
-        _LOGGER.debug("dSServerStart: Start the dScriptServer")
-        hass.data[DATA_SERVER].StartServer()
+        try:
+            _LOGGER.debug("dSServerStart: Start the dScriptServer")
+            hass.data[DATA_SERVER].StartServer()
+        except Exception as e:
+            _LOGGER.error("dSServerStart: Could not start dScriptServer: %s", str(e))
 
     def dSServerStop(event):
         """Stop the running dScriptServer instance"""
-        _LOGGER.debug("dSServerStop: Stop the dScriptServer")
-        hass.data[DATA_SERVER].StopServer()
+        try:
+            _LOGGER.debug("dSServerStop: Stop the dScriptServer")
+            hass.data[DATA_SERVER].StopServer()
+        except Exception as e:
+            _LOGGER.error("dSServerStop: Could not stop dScriptServer: %s", str(e))
 
     def dSBoardPlatformSetup():
         """Setup different platforms supported by dScriptModule"""
         for domain in SUPPORTED_DOMAINS:
             _LOGGER.debug("Discover platform: %s - %s",DOMAIN, domain)
             discovery.load_platform(hass, domain, DOMAIN, {}, config)
-    
+
     def dSBoardGetConfig(sender, event):
         """Handles incomig getconfig connection of any board"""
         #_LOGGER.debug("dSBoardGetConfig: handle event")
@@ -177,7 +195,7 @@ def setup(hass, config):
         if not dSBoard:
             _LOGGER.warning("dSBoardGetConfig: Received trigger from uninitialized board: %s",sender.sender.IP)
             return False
-        _LOGGER.debug("dSBoardGetConfig: Check if board config was updated: %s", dSBoard._HostName)
+        _LOGGER.debug("dSBoardGetConfig: Check if board config was updated: %s", dSBoard.friendlyname)
         oLights=dSBoard._ConnectedLights
         oShutters=dSBoard._ConnectedShutters
         oSwitches=dSBoard._ConnectedSockets
@@ -201,7 +219,7 @@ def setup(hass, config):
             dSBoardSetup(sender.sender, hass.data[DATA_SERVER].Port, hass.data[DATA_SERVER]._Protocol, hass.data[DATA_SERVER]._AESKey)
             dSBoardPlatformSetup()
         else:
-            _LOGGER.debug("dSBoardHearbeat: HeartBeat of known board: %s", dSBoard._HostName)
+            _LOGGER.debug("dSBoardHearbeat: HeartBeat of known board: %s", dSBoard.friendlyname)
             if dSBoard._CustomFirmeware:
                 dSBoardGetConfig(sender, event)        
 
@@ -213,28 +231,13 @@ def setup(hass, config):
             _LOGGER.debug("dSBoardDeviceUpdate: Push device update: %s -> %s", dSDevice.entity_id, sender.value)
             dSDevice.update_push() # check if in future we can get data directly from "sender.value" and give that to update_push(sender.value)
 
-    def handle_dSServerRestart(call):
-        """Handle service call for dSServer restart"""
-        _LOGGER.debug("handle_dSServerRestart: init restart")
-        dSServerStop(call)
-        dSServerStart(call)
-	
-    # Setup all dScript devices defined within configuration.yaml
-    _LOGGER.info("Setup %s devices", DOMAIN)
-    hass.data[DATA_BOARDS] = []
-    hass.data[DATA_DEVICES] = []
-    configured_devices = config[DOMAIN].get(CONF_DEVICES)
-    if configured_devices:
-        for device in configured_devices:
-            dSBoardSetup(device.get(CONF_HOST), device.get(CONF_PORT), device.get(CONF_PROTOCOL), device.get(CONF_AESKEY))
-
     # Setup the dScriptServer which handles incoming connections if defined within configuration.yaml
     dSSrvConf=config[DOMAIN][CONF_SERVER]
     if not dSSrvConf == None and  dSSrvConf.get(CONF_ENABLED):
         _LOGGER.info("Setup %s server", DOMAIN)
         try:
             hass.data[DATA_SERVER] = dScriptServer(dSSrvConf.get(CONF_LISTENIP),dSSrvConf.get(CONF_PORT),dSSrvConf.get(CONF_PROTOCOL))
-            
+
             _LOGGER.debug("Register dScriptServer event handlers")
             if len(dSSrvConf.get(CONF_AESKEY)) > 0:
                 hass.data[DATA_SERVER].SetAESKey(dSSrvConf.get(CONF_AESKEY))
@@ -246,17 +249,32 @@ def setup(hass, config):
             hass.data[DATA_SERVER].addEventHandler('getmotion',dSBoardDeviceUpdate)
             hass.data[DATA_SERVER].addEventHandler('getbutton',dSBoardDeviceUpdate)
 
-            # Register service to restart dScriptServer
-            _LOGGER.debug("Register services for dScriptServer")
-            hass.services.register(DOMAIN, "dSServerRestart", handle_dSServerRestart)
-			
             # register server on home assistant start & stop events so it is available when HA starts
             _LOGGER.debug("Register dScriptServer to start/stop with home assistant")
             hass.bus.listen_once(EVENT_HOMEASSISTANT_START, dSServerStart)
             hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, dSServerStop)
-        except:
-            _LOGGER.warning("Error while setting up dScriptServer!")
+
+            _LOGGER.debug("Regsiter dScriptServer specific services")
+            hass.services.register(DOMAIN, "serverstop", dSServerStop)
+            hass.services.register(DOMAIN, "serverstart", dSServerStart)
+        except Exception as e:
+            _LOGGER.warning("Error while configuring %s server: %s", DOMAIN, str(e))
             hass.data[DATA_SERVER]=None
+            return False
+
+    # Setup all dScript devices defined within configuration.yaml
+    _LOGGER.info("Setup %s devices", DOMAIN)
+    hass.data[DATA_BOARDS] = []
+    hass.data[DATA_DEVICES] = []
+    configured_devices = config[DOMAIN].get(CONF_DEVICES)
+    if configured_devices:
+        for device in configured_devices:
+            dSBoardSetup(device.get(CONF_HOST), device.get(CONF_PORT), device.get(CONF_PROTOCOL), device.get(CONF_AESKEY))
+
+#    try:
+#        _LOGGER.info("Register %s services", DOMAIN)
+#    except:
+#        _LOGGER.warning("Error while registering %s services!", DOMAIN)
 
     #Setup all platform devices supported by dScriptModule
     dSBoardPlatformSetup()

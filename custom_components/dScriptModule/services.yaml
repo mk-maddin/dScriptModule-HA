@@ -1,3 +1,0 @@
-dSServerRestart:
-  name: dSServerRestart
-  description: Restarts the local dScriptServer instance to communicate to dScriptBoards.
