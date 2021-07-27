@@ -14,12 +14,14 @@ from homeassistant.const import (
     ATTR_SW_VERSION,
 )
 from . import (
+        DOMAIN,
         DATA_BOARDS, 
         DATA_DEVICES, 
         DATA_SERVER,
         getdSDeviceByID,
         CATTR_FW_VERSION,
         CATTR_SW_TYPE,
+        CATTR_IP_ADDRESS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -33,8 +35,15 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         try:
             _LOGGER.debug("%s: Create status %s for board", dSBoard.friendlyname, domain)
             device=dScriptBoardSensor(dSBoard,0)
-            hass.data[DATA_DEVICES].append(device)
-            devices.append(device)
+            exists = False
+            for entry in hass.data[DATA_DEVICES]:
+                if entry._name == device._name:
+                    exists = True
+                    _LOGGER.debug("%s: A device with the equal name / entity_id alreay exists: %s", dSBoard.friendlyname, device._name)
+                    break
+            if not exists:
+                hass.data[DATA_DEVICES].append(device)
+                devices.append(device)
         except Exception as e:
             _LOGGER.error("%s: Creation of status %s failed: %s", dSBoard.friendlyname, domain, str(e)) 
 
@@ -49,8 +58,15 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
                 if getdSDeviceByID(hass, dSBoard.IP, i, 'getmotion'):
                     continue # If the device already exists do not recreate
                 device=dScriptMotionSensor(dSBoard,i)
-                hass.data[DATA_DEVICES].append(device)
-                devices.append(device)
+                exists = False
+                for entry in hass.data[DATA_DEVICES]:
+                    if entry._name == device._name:
+                        exists = True
+                        _LOGGER.debug("%s: A device with the equal name / entity_id alreay exists: %s", dSBoard.friendlyname, device._name)
+                        break
+                if not exists:
+                    hass.data[DATA_DEVICES].append(device)
+                    devices.append(device)
             except Exception as e:
                 _LOGGER.error("%s: Creation of motion %s %s failed: %s", dSBoard.friendlyname, domain, i, str(e))
 
@@ -62,12 +78,19 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
                 if getdSDeviceByID(hass, dSBoard.IP, i, 'getbutton'):
                     continue # If the device already exists do not recreate
                 device=dScriptButtonSensor(dSBoard,i)
-                hass.data[DATA_DEVICES].append(device)
-                devices.append(device)
+                exists = False
+                for entry in hass.data[DATA_DEVICES]:
+                    if entry._name == device._name:
+                        exists = True
+                        _LOGGER.debug("%s: A device with the equal name / entity_id alreay exists: %s", dSBoard.friendlyname, device._name)
+                        break
+                if not exists:
+                    hass.data[DATA_DEVICES].append(device)
+                    devices.append(device)
             except Exception as e:
                 _LOGGER.error("%s: Creation of button %s %s failed: %s", dSBoard.friendlyname, domain, i, str(e))   
    
-    _LOGGER.info("%s: Prepared setup for %s %s devices", dSBoard.friendlyname, len(devices), domain)
+    _LOGGER.info("%s: Prepared setup for %s %s devices", DOMAIN, len(devices), domain)
     add_entities(devices)
 
 
@@ -134,7 +157,7 @@ class dScriptMotionSensor(Entity):
             self._update_state(state)
             _LOGGER.debug("%s: update pull complete %s", self._board.friendlyname, self.entity_id)
         except Exception as e:
-            _LOGGER.warning("%s: update pull failed %s: %s", self._board.friendlyname, self.entity_id, str(e))
+            _LOGGER.warning("%s: update pull failed %s: %s (%s.%s)", self._board.friendlyname, self.entity_id, str(e), e.__class__.__module__, type(e).__name__)
 
     def update_push(self):
         """Get the latest status from device after an update was pushed"""
@@ -147,7 +170,7 @@ class dScriptMotionSensor(Entity):
             self.hass.states.set(self.entity_id,state,attributesObject)
             _LOGGER.debug("%s: update push complete %s", self._board.friendlyname, self.entity_id)
         except Exception as e:
-            _LOGGER.warning("%s: update push failed %s: %s", self._board.friendlyname, self.entity_id, str(e))
+            _LOGGER.warning("%s: update push failed %s: %s (%s.%s)", self._board.friendlyname, self.entity_id, str(e), e.__class__.__module__, type(e).__name__)
 
     def update(self): #This function is automatically triggered for local_pull integrations
         """Get latest data and states from the device."""
@@ -198,6 +221,17 @@ class dScriptButtonSensor(Entity):
     def state(self):
         return self._state
 
+#    def update_manual(self,value):
+#        """Manually set the objects status"""
+#        try:
+#            _LOGGER.debug("%s: update manual: %s", self._board.friendlyname, self._name)
+#            if not isinstance(value, int):
+#                _LOGGER.error("%s: update manual failed %s: parameter value %s is not int", self._board.friendlyname, self._name, value)
+#                return False
+#            self._update_state(value)
+#        except Exception as e:
+#            _LOGGER.warning("%s: update manual failed %s: %s (%s.%s)", self._board.friendlyname, self.entity_id, str(e), e.__class__.__module__, type(e).__name__)
+
     def _update_state(self,state):
         """Sets the object status according to the state result"""
         self._state = state
@@ -210,7 +244,7 @@ class dScriptButtonSensor(Entity):
             self._update_state(state)
             _LOGGER.debug("%s: update pull complete %s", self._board.friendlyname, self.entity_id)
         except Exception as e:
-            _LOGGER.warning("%s: update pull failed %s: %s", self._board.friendlyname, self.entity_id, str(e))
+            _LOGGER.warning("%s: update pull failed %s: %s (%s.%s)", self._board.friendlyname, self.entity_id, str(e), e.__class__.__module__, type(e).__name__)
 
     def update_push(self):
         """Get the latest status from device after an update was pushed"""
@@ -223,7 +257,7 @@ class dScriptButtonSensor(Entity):
             self.hass.states.set(self.entity_id,state,attributesObject)
             _LOGGER.debug("%s: update push complete %s", self._board.friendlyname, self.entity_id)
         except Exception as e:
-            _LOGGER.warning("%s: update push failed %s: %s", self._board.friendlyname, self.entity_id, str(e))
+            _LOGGER.warning("%s: update push failed %s: %s (%s.%s)", self._board.friendlyname, self.entity_id, str(e), e.__class__.__module__, type(e).__name__)
 
     def update(self): #This function is automatically triggered for local_pull integrations
         """Get latest data and states from the device."""
@@ -336,6 +370,7 @@ class dScriptBoardSensor(Entity):
             ATTR_DEVICE_ID: self._board._MACAddress,
             ATTR_SW_VERSION: self._software,
             CATTR_FW_VERSION: self._firmware,
+            CATTR_IP_ADDRESS: self._board.IP,
             CATTR_SW_TYPE: self._board._CustomFirmeware,
         }
 

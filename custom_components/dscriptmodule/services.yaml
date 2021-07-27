@@ -1,0 +1,25 @@
+# Describes the format for available HomeKit services
+
+serverstop:
+  name: Stop dScriptServer 
+  description: Stops the local dScriptServer instance
+
+serverstart:
+  name: Start dScriptServer 
+  description: Starts the local dScriptServer instance
+
+resetbutton:
+  name: Reset dScriptButton
+  dscription: Reset virtual Button entity from dScriptBoard to 0
+  fields:
+    entity_id:
+      name: Entity
+      description: Name of entity that will reset.
+      example:
+        - sensor.ds_hauptbad_button2
+        - sensor.ds_speis_button1
+      selector:
+        entity:
+          integration: sensor
+          domain: dscriptmodule 
+

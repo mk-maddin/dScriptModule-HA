@@ -3,6 +3,7 @@ import logging
 import requests
 from homeassistant.components.light import LightEntity
 from . import (
+        DOMAIN,
         DATA_BOARDS, 
         DATA_DEVICES, 
         DATA_SERVER,
@@ -28,12 +29,19 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
                 if getdSDeviceByID(hass, dSBoard.IP, i, 'getlight'):
                     continue # If the device already exists do not recreate
                 device=dScriptLight(dSBoard,i)
-                hass.data[DATA_DEVICES].append(device)
-                devices.append(device)
+                exists = False
+                for entry in hass.data[DATA_DEVICES]:
+                    if entry._name == device._name:
+                        exists = True
+                        _LOGGER.debug("%s: A device with the equal name / entity_id alreay exists: %s", dSBoard.friendlyname, device._name)
+                        break
+                if not exists:
+                    hass.data[DATA_DEVICES].append(device)
+                    devices.append(device)
             except Exception as e:
                 _LOGGER.error("%s: Creation of %s %s failed: %s", dSBoard.friendlyname, domain, i, str(e))
 
-    _LOGGER.info("%s: Prepared setup for %s %s devices", dSBoard.friendlyname, len(devices), domain)
+    _LOGGER.info("%s:Prepared setup for %s %s devices", DOMAIN, len(devices), domain)
     add_entities(devices)
 
 class dScriptLight(LightEntity):

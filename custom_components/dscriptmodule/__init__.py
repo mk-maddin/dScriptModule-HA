@@ -8,6 +8,7 @@ from homeassistant.const import (
     CONF_DEVICES,
     CONF_DISCOVERY,
     CONF_ENTITIES,
+    CONF_ENTITY_ID,
     CONF_HOST,
     CONF_MAC,
     CONF_NAME,
@@ -40,6 +41,7 @@ DATA_BOARDS=DOMAIN + "_boards"
 DATA_SERVER=DOMAIN + "_server"
 
 CATTR_FW_VERSION= "firmware"
+CATTR_IP_ADDRESS= "ipaddress"
 CATTR_SW_TYPE= "custom_app"
 
 CONFIG_SCHEMA = vol.Schema(
@@ -231,6 +233,39 @@ def setup(hass, config):
             _LOGGER.debug("dSBoardDeviceUpdate: Push device update: %s -> %s", dSDevice.entity_id, sender.value)
             dSDevice.update_push() # check if in future we can get data directly from "sender.value" and give that to update_push(sender.value)
 
+    def getdSDeviceByEntityID(entity_id):
+        """Handle the service request to reset a specific button to 0"""
+        try:
+            entity=None
+            for device in hass.data[DATA_DEVICES]:
+                if device.entity_id == entity_id:
+                    entity=device
+                    break
+            if entity == None:
+                _LOGGER.error("getdSDeviceByEntityID: unable to find entity: %s", entity_id)
+                return None
+            _LOGGER.debug("getdSDeviceByEntityID: found entity: %s", entity._name)
+            return entity
+        except Exception as e:
+            _LOGGER.error("getdSDeviceByEntityID: entity search failed: %s (%s.%s)", str(e), e.__class__.__module__, type(e).__name__)
+
+    def service_UpdateButton(call):
+        """Handle the service request to reset a specific button to 0"""
+        try:
+            _LOGGER.debug("service_ResetButton: handle call")
+            entity_ids=call.data.get(CONF_ENTITY_ID)
+            if entity_ids == None:
+                _LOGGER.error("%s - UpdateButton: please define %s in service call data", DOMAIN, CONF_ENTITY_ID)
+                return False
+            for entity_id in entity_ids:
+                dSDevice=getdSDeviceByEntityID(entity_id)
+                if dSDevice == None:
+                    continue
+                _LOGGER.debug("%s - UpdateButton: push device update: %s", dSDevice.entity_id)
+                dSDevice.update_push()
+        except Exception as e:
+            _LOGGER.error("%s - UpdateButton: service call failed: %s (%s.%s)", DOMAIN, str(e), e.__class__.__module__, type(e).__name__)
+
     # Setup the dScriptServer which handles incoming connections if defined within configuration.yaml
     dSSrvConf=config[DOMAIN][CONF_SERVER]
     if not dSSrvConf == None and  dSSrvConf.get(CONF_ENABLED):
@@ -271,10 +306,12 @@ def setup(hass, config):
         for device in configured_devices:
             dSBoardSetup(device.get(CONF_HOST), device.get(CONF_PORT), device.get(CONF_PROTOCOL), device.get(CONF_AESKEY))
 
-#    try:
-#        _LOGGER.info("Register %s services", DOMAIN)
-#    except:
-#        _LOGGER.warning("Error while registering %s services!", DOMAIN)
+    try:
+        _LOGGER.info("Register %s services", DOMAIN)
+#        hass.services.register(DOMAIN, "resetbutton", service_ResetButton)
+        hass.services.register(DOMAIN, "updatebutton", service_UpdateButton)
+    except:
+        _LOGGER.warning("Error while registering %s services!", DOMAIN)
 
     #Setup all platform devices supported by dScriptModule
     dSBoardPlatformSetup()
