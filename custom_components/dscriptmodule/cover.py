@@ -5,6 +5,11 @@ from homeassistant.components.cover import (
         ATTR_POSITION, 
         ATTR_CURRENT_POSITION,
         CoverEntity,
+        DEVICE_CLASS_SHUTTER,
+        SUPPORT_CLOSE,
+        SUPPORT_OPEN,
+        SUPPORT_SET_POSITION,
+        SUPPORT_STOP,
 )
 from . import (
         DOMAIN,
@@ -51,12 +56,14 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 class dScriptCover(CoverEntity):
     """The cover class for dScriptModule covers."""
     _topic = 'getshutter'
+    _attr_device_class = DEVICE_CLASS_SHUTTER
 
     def __init__(self, board, identifier):
         """Initialize the cover."""
         self._identifier = identifier
         self._board = board
         self._name = self._board.friendlyname + "_Cover" + str(self._identifier)
+        self._supported_features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_STOP | SUPPORT_SET_POSITION
         self._current_cover_position = None
         self._state = None
         _LOGGER.debug("%s: Initialized cover: %s", self._board.friendlyname, self._name)
@@ -73,7 +80,12 @@ class dScriptCover(CoverEntity):
         if self._board._ConnectedShutters < self._identifier:
             return False
         return True
-    
+
+    @property
+    def supported_features(self):
+        """Flag supported features."""
+        return self._supported_features
+
     @property
     def current_cover_position(self):
         """Return current position of cover.
