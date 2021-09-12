@@ -1,0 +1,24 @@
+# version: 2021.08.08
+# author: Martin Kraemer, mk.maddin@gmail.com
+# description: home assistant configuration file - yaml structure
+# 	the topic this file handles is described by its filename
+
+dscriptmodule:
+  server:
+    enabled: True
+  #  protocol: binaryaes
+  #  aes_key: "This MUST be 32 characters long."
+
+  #do define devices manually instead of discovering them via server
+  #devices:
+  #  - host: 192.168.32.120
+  #    protocol: binaryaes
+  #    aes_key: "This MUST be 32 characters long."
+
+  #manually edit device information of devices configured
+#  entities:
+#    - mac: '64:aa:bb:cc:11:22'
+#      name: 'dS-wohnzimmer'
+#      #actual MAC is 04:aa:bb:cc:11:22 -> boards strip leading 0
+#    - mac: '4:aa:bb:cc:11:22'
+#      name: 'dS-technik'

@@ -8,13 +8,13 @@ serverstart:
   name: Start dScriptServer 
   description: Starts the local dScriptServer instance
 
-resetbutton:
-  name: Reset dScriptButton
-  dscription: Reset virtual Button entity from dScriptBoard to 0
+updatebutton:
+  name: Update dScriptButton
+  dscription: Trigger update of virtual Button entity from dScriptBoard
   fields:
     entity_id:
       name: Entity
-      description: Name of entity that will reset.
+      description: Name of entity that will be updated
       example:
         - sensor.ds_hauptbad_button2
         - sensor.ds_speis_button1
