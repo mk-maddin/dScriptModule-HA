@@ -1,7 +1,7 @@
 {
   "domain": "dscriptmodule",
   "name": "robot-electronics dScript modules",
-  "version": "3.4.1",
+  "version": "3.4.2",
   "documentation": "https://github.com/mk-maddin/dScriptModule-HA",
   "requirements": ["dScriptModule>=3.4.0"],
   "dependencies": ["light","cover","switch", "sensor", "binary_sensor"],

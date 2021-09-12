@@ -200,7 +200,7 @@ class dScriptLight(LightEntity):
             if not state is None:
                 self._state = state
                 self.async_write_ha_state()    
-                _LOGGER.error("%s - %s: async_local_push complete: %s", self._board.friendlyname, self._name, state)
+                _LOGGER.debug("%s - %s: async_local_push complete: %s", self._board.friendlyname, self._name, state)
             else:
                 await self.hass.async_create_task(self.async_local_poll())
         except Exception as e:
