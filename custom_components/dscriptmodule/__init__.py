@@ -39,6 +39,7 @@ from .const import (
     DEFAULT_PROTOCOL,
     DOMAIN,
     NATIVE_ASYNC,
+    SERVER_NATIVE_ASYNC,
     SUPPORTED_PLATFORMS,
 )
 from .utils import (
@@ -170,8 +171,11 @@ async def async_setup_entry(hass, config) -> bool:
         """Start the dScriptServer instance"""
         try:
             _LOGGER.debug("async_dSServerStart: Start the dScriptServer")
-            #hass.data[DATA_SERVER].StartServer()
-            hass.data[DATA_SERVER].StartServer_async()
+            if SERVER_NATIVE_ASYNC:
+                #hass.data[DATA_SERVER].StartServer_async_thread()
+                await hass.data[DATA_SERVER].async_StartServer()
+            else:
+                hass.data[DATA_SERVER].StartServer()
             i = 0
             while hass.data[DATA_SERVER].State == False:
                 if i > 10: raise Exception("Timeout: ", i)
@@ -184,8 +188,12 @@ async def async_setup_entry(hass, config) -> bool:
         """Stop the running dScriptServer instance"""
         try:
             _LOGGER.debug("async_dSServerStop: Stop the dScriptServer")
-            #hass.data[DATA_SERVER].StopServer()
-            hass.data[DATA_SERVER].StopServer_async()
+            if SERVER_NATIVE_ASYNC:
+                #hass.data[DATA_SERVER].StopServer_async_thread()
+                await hass.data[DATA_SERVER].async_StopServer()
+            else:
+                hass.data[DATA_SERVER].StopServer()
+            
             i = 0
             while hass.data[DATA_SERVER].State == True:
                 if i > 10: raise Exception("Timeout: ", i)

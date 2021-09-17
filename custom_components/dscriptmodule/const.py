@@ -6,6 +6,8 @@ from typing import Final
 SUPPORTED_PLATFORMS: Final = ["light", "switch", "cover", "sensor"]
 DOMAIN: Final = 'dscriptmodule'
 NATIVE_ASYNC: Final = True
+SERVER_NATIVE_ASYNC: Final = NATIVE_ASYNC
+#SERVER_NATIVE_ASYNC: Final = False
 
 DSDOMAIN_LIGHT: Final = 'light'
 DSDOMAIN_COVER: Final = 'cover'
