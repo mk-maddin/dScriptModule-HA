@@ -16,7 +16,7 @@ SSH_pass='12345678'
 SSH_user="root"
 verbose=""
 component="dscriptmodule"
-package="dscript"
+package="dscript_BLUB"
 ha_path="/usr/share/hassio/homeassistant"
 
 ##--help text and script parameter processing

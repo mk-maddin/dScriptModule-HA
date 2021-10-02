@@ -354,6 +354,7 @@ class dScriptButtonSensor(Entity):
         """Poll the latest status from device"""
         try:
             _LOGGER.debug("%s - %s: local_poll", self._board.friendlyname, self._name)
+            #execute twice to ensure button is reset if we have received information via PUSH (not pull)
             state=self._board.GetButton(self._identifier)
             self._state = state
             _LOGGER.debug("%s - %s: local_poll complete: %s", self._board.friendlyname, self._name, state)
@@ -368,6 +369,12 @@ class dScriptButtonSensor(Entity):
                 self._state = state
                 self.async_write_ha_state()    
                 _LOGGER.debug("%s - %s: async_local_push complete: %s", self._board.friendlyname, self._name, state)
+                # still need to execute a poll as firmware does not reset the value without it :(
+                if NATIVE_ASYNC:
+                    state = await self._board.async_GetButton(self._identifier)
+                else:
+                    state = await self.hass.async_add_executor_job(self._board.GetButton, self._identifier)
+                _LOGGER.debug("%s - %s: async_local_push post executed poll reset: %s", self._board.friendlyname, self._name, state)
             else:
                 await self.hass.async_create_task(self.async_local_poll())        
         except Exception as e:
@@ -380,6 +387,9 @@ class dScriptButtonSensor(Entity):
             if not state is None:
                 self._state = state
                 _LOGGER.debug("%s - %s: local_push complete: %s", self._board.friendlyname, self._name, state)
+                # still need to execute a poll as firmware does not reset the value without it :(
+                state=self._board.GetButton(self._identifier)
+                _LOGGER.debug("%s - %s: local_push post executed poll reset: %s", self._board.friendlyname, self._name, state)
             else:
                 self.local_poll()
         except Exception as e:

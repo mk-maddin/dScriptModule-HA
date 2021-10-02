@@ -313,8 +313,7 @@ async def async_setup_entry(hass, config) -> bool:
                     _LOGGER.error("%s - async_service_UpdateButton: unable to find entity: %s", call, entity_id)
                     continue
                 _LOGGER.debug("%s - async_service_UpdateButton: update poll: %s", call, dSDevice.entity_id)
-                hass.async_create_task(
-                    dSDevice.async_local_poll())
+                hass.async_create_task(dSDevice.async_local_poll())
         except Exception as e:
             _LOGGER.error("%s - async_service_UpdateButton: failed: %s (%s.%s)", sender.sender, str(e), e.__class__.__module__, type(e).__name__)
 

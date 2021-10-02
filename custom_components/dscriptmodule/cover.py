@@ -308,7 +308,6 @@ class dScriptCover(CoverEntity):
                     self._state = STATE_CLOSED
                 else:
                     self._state = STATE_STOPPED
-                self._state = state
                 self.async_write_ha_state()    
                 _LOGGER.debug("%s - %s: async_local_push complete: %s", self._board.friendlyname, self._name, state)
             else:
@@ -328,7 +327,6 @@ class dScriptCover(CoverEntity):
                     self._state = STATE_CLOSED
                 else:
                     self._state = STATE_STOPPED
-                self._state = state
                 _LOGGER.error("%s - %s: local_push complete: %s", self._board.friendlyname, self._name, state)
             else:
                 self.local_poll()
