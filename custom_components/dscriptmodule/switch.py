@@ -199,6 +199,8 @@ class dScriptSwitch(SwitchEntity):
         try:
             _LOGGER.debug("%s - %s: async_local_push", self._board.friendlyname, self._name)
             if not state is None:
+                if state == STATE_ON: state = STATE_OFF
+                elif state == STATE_OFF: state = STATE_ON
                 self._state = state
                 self.async_write_ha_state()    
                 _LOGGER.debug("%s - %s: async_local_push complete: %s", self._board.friendlyname, self._name, state)
@@ -212,6 +214,8 @@ class dScriptSwitch(SwitchEntity):
         try:
             _LOGGER.debug("%s - %s: local_push", self._board.friendlyname, self._name)
             if not state is None:
+                if state == STATE_ON: state = STATE_OFF
+                elif state == STATE_OFF: state = STATE_ON
                 self._state = state
                 _LOGGER.debug("%s - %s: local_push complete: %s", self._board.friendlyname, self._name, state)
             else:
