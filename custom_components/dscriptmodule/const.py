@@ -8,6 +8,7 @@ DOMAIN: Final = 'dscriptmodule'
 NATIVE_ASYNC: Final = True
 SERVER_NATIVE_ASYNC: Final = NATIVE_ASYNC
 #SERVER_NATIVE_ASYNC: Final = False
+MANUFACTURER: Final = "Devantech"
 
 DSDOMAIN_LIGHT: Final = 'light'
 DSDOMAIN_COVER: Final = 'cover'

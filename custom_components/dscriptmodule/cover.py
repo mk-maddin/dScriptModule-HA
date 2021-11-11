@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.device_registry import format_mac
 from homeassistant.components.cover import (
     ATTR_POSITION, 
     ATTR_CURRENT_POSITION,
@@ -35,7 +36,9 @@ from homeassistant.const import (
 )
 
 from .const import( 
+    DOMAIN,
     DSDOMAIN_COVER,
+    MANUFACTURER,
     NATIVE_ASYNC,
     STATE_STOPPED,
 ) 
@@ -53,6 +56,8 @@ class dScriptCover(CoverEntity):
     _domain = None
     _icon = None
     _device_class = None
+    _formatted_mac = None
+    uniqueid = None
 
     def __init__(self, board, identifier, domain) -> None:
         """Initialize the object."""
@@ -64,6 +69,8 @@ class dScriptCover(CoverEntity):
         self._supported_features = SUPPORT_OPEN | SUPPORT_CLOSE | SUPPORT_STOP | SUPPORT_SET_POSITION
         self._current_cover_position = None
         self._state = STATE_UNKNOWN
+        self._formatted_mac = format_mac(str(self._board._MACAddress))
+        self.uniqueid = self._formatted_mac + "-" + str(self._identifier)
         _LOGGER.debug("%s - %s: __init__ complete", self._board.friendlyname, self._name)
 
     @property
@@ -87,11 +94,11 @@ class dScriptCover(CoverEntity):
         """Return the current device state."""
         return self._state
 
-    #@property
-    #def unique_id(self) -> str | None:
-    #    """Return a unique identifier for this device."""
-    #    _LOGGER.debug("%s - %s: unique_id", self._board.friendlyname, self._name) 
-    #    return self._device.uniqueid
+    @property
+    def unique_id(self) -> str | None:
+        """Return a unique identifier for this device."""
+        _LOGGER.debug("%s - %s: unique_id: %s", self._board.friendlyname, self._name, self.uniqueid) 
+        return self.uniqueid
 
     @property
     def available(self) -> bool:
@@ -115,26 +122,21 @@ class dScriptCover(CoverEntity):
         else:
             return True
 
-    #@property
-    #def device_info(self) -> DeviceInfo:
-    #    """Return a device description for device registry."""
-    #    _LOGGER.debug("%s - %s: device_info", self._board.friendlyname, self._name)
-    #    if (self._device.uniqueid is None or
-    #            self._device.uniqueid.count(':') != 7):
-    #        return None
-    #
-    #    serial = self._device.uniqueid.split('-', 1)[0]
-    #    bridgeid = self.gateway.api.config.bridgeid
-    #
-    #    return {
-    #        'connections': {(CONNECTION_ZIGBEE, serial)},
-    #        'identifiers': {(DECONZ_DOMAIN, serial)},
-    #        'manufacturer': self._device.manufacturer,
-    #        'model': self._device.modelid,
-    #        'name': self._device.name,
-    #        'sw_version': self._device.swversion,
-    #        'via_hub': (DECONZ_DOMAIN, bridgeid),
-    #    }
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return a device description for device registry."""
+        _LOGGER.debug("%s - %s: device_info", self._board.friendlyname, self._name)
+        info = DeviceInfo(
+            identifiers={(DOMAIN, self._formatted_mac)},
+            default_manufacturer=MANUFACTURER,
+            default_model=self._board._ModuleID,
+            default_name=self._board.friendlyname,
+            sw_version=str(self._board._ApplicationFirmwareMajor) + "." + str(self._board._ApplicationFirmwareMinor),
+            configuration_url="http://" + self._board.IP + "/index.htm",
+            suggested_area=self._board.friendlyname.split('_')[-1]
+        )
+        _LOGGER.debug("%s - %s: device_info result: %s", self._board.friendlyname, self._name, info)
+        return info
 
     @property
     def supported_features(self):
