@@ -1,0 +1,46 @@
+{
+    "config": {
+        "abort": {
+            "single_instance_allowed": "Only a single configuration instance is allowed.",
+            "exception": "An unknown exception occured during config_flow - check log for details.",
+            "not_supported": "The current workflow is not supported yet. Please wait for version update."
+        },
+        "step": {
+            "input": {
+                "data": {
+                    "enabled": "Enable the dScriptServer included in component",
+                    "discovery": "Automatically discover / setup new dScriptBoards in HA which are contacting the dScriptServer"
+                },
+                "description": "Setup integration with Home Assistant.",
+                "title": "dscriptmodule integration"
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "config_server": {
+                "data": {
+                    "enabled": "Enable the dScriptServer included in component",
+                    "listen_ip": "IP the dScriptServer listens to - 0.0.0.0 to listen on all interface IPs",
+                    "port": "Port the dScriptServer listens to",
+                    "protocol": "Protocol the dScriptBoards using to contact the dScriptServer",
+                    "aes_key": "Encryption Key used for communication with the dScriptBoards - if any",
+                    "discovery": "Automatically discover / setup new dScriptBoards in HA which are contacting the dScriptServer"
+                },
+                "title": "dScript - Server Configuration",
+                "description": "Configuration (1/1)"
+            },
+            "yaml": {
+                "data": {
+                    "convert": "Check this if you want to move your configuration to the home assistant database. If you do this you can change the settings here and settings in configuration.yaml will be ignored and you can remove them."
+                },
+                "title": "dScript - configuration.yaml",
+                "description": "Your settings are stored in configuration.yaml."
+            }
+        },
+        "abort": {
+            "exception": "An unknown exception occured during config_flow - check log for details.",
+            "not_supported": "The current workflow is not supported yet. Please wait for version update."
+        }
+    }
+}

@@ -17,19 +17,35 @@ from homeassistant.const import (
     STATE_UNKNOWN,
 )
 
+from .utils import async_setupPlatformdScript
 from .const import(
+    DATA_PLATFORMS,        
     DOMAIN,
     DSDOMAIN_LIGHT,
     MANUFACTURER,
     NATIVE_ASYNC,
 ) 
 _LOGGER: Final = logging.getLogger(__name__)
+platform = 'light'
 
-async def async_setup_platform(hass: HomeAssistant, config: ConfigEntry, async_add_entities: AddEntitiesCallback, discovery_info=None) -> None:
+async def async_setup_platform(hass: HomeAssistant, config: ConfigEntry, async_add_entities: AddEntitiesCallback, discovery_info: Optional[DiscoveryInfoType]=None) -> None:
     """Set up the dScriptModule light platform."""
-    from .utils import async_setupPlatformdScript
+    _LOGGER.debug("%s - async_setup_platform: platform %s", DOMAIN, DSDOMAIN_LIGHT)
     await async_setupPlatformdScript(DSDOMAIN_LIGHT, hass, config, async_add_entities, discovery_info)
 
+async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.ConfigEntry, async_add_entities):
+    """Setup sensors from a config entry created in the integrations UI."""
+    _LOGGER.debug("%s - async_setup_entry: platform %s", DOMAIN, DSDOMAIN_LIGHT)
+    try:
+        config = hass.data[DOMAIN][config_entry.entry_id]
+        if config_entry.options:
+            config.update(config_entry.options)
+        await async_setupPlatformdScript(DSDOMAIN_LIGHT, hass, config, async_add_entities)    
+        hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS]['in_setup'].remove(platform)    
+        _LOGGER.debug("%s - async_setup_entry: platform %s complete", DOMAIN, platform)
+    except Exception as e:
+        _LOGGER.error("%s - async_setup_entry: platform %s failed: %s (%s.%s)", DOMAIN, DSDOMAIN_LIGHT, str(e), e.__class__.__module__, type(e).__name__)    
+    
 class dScriptLight(LightEntity):
     """The class for dScriptModule lights."""
     _identifier = None
@@ -50,7 +66,7 @@ class dScriptLight(LightEntity):
         self._state = STATE_UNKNOWN
         self._formatted_mac = format_mac(str(self._board._MACAddress))
         self.uniqueid = self._formatted_mac + "-" + str(self._identifier)
-        _LOGGER.debug("%s - %s: __init__ complete", self._board.friendlyname, self._name)
+        _LOGGER.debug("%s - %s: __init__ complete (uid: %s)", self._board.friendlyname, self._name, self.uniqueid)
 
     @property
     def name(self) -> str | None:

@@ -1,4 +1,4 @@
-"""Support for dScriptModule switch devices."""
+"""Support for dScriptModule light devices."""
 
 from __future__ import annotations
 from typing import Final
@@ -10,44 +10,28 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.device_registry import format_mac
-from homeassistant.components.switch import SwitchEntity
+from homeassistant.components.light import LightEntity
 from homeassistant.const import (
     STATE_ON,
     STATE_OFF,
     STATE_UNKNOWN,
 )
 
-from .utils import async_setupPlatformdScript
 from .const import(
-    DATA_PLATFORMS,        
     DOMAIN,
-    DSDOMAIN_SWITCH,
+    DSDOMAIN_LIGHT,
     MANUFACTURER,
     NATIVE_ASYNC,
 ) 
 _LOGGER: Final = logging.getLogger(__name__)
-platform = 'switch'
 
-async def async_setup_platform(hass: HomeAssistant, config: ConfigEntry, async_add_entities: AddEntitiesCallback, discovery_info: Optional[DiscoveryInfoType] = None) -> None:
-    """Set up the dScriptModule switch platform."""
-    _LOGGER.debug("%s - async_setup_platform: platform %s", DOMAIN, DSDOMAIN_SWITCH)
-    await async_setupPlatformdScript(DSDOMAIN_SWITCH, hass, config, async_add_entities, discovery_info)
+async def async_setup_platform(hass: HomeAssistant, config: ConfigEntry, async_add_entities: AddEntitiesCallback, discovery_info=None) -> None:
+    """Set up the dScriptModule light platform."""
+    from .utils import async_setupPlatformdScript
+    await async_setupPlatformdScript(DSDOMAIN_LIGHT, hass, config, async_add_entities, discovery_info)
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.ConfigEntry, async_add_entities):
-    """Setup sensors from a config entry created in the integrations UI."""
-    _LOGGER.debug("%s - async_setup_entry: platform %s", DOMAIN, DSDOMAIN_SWITCH)
-    try:
-        config = hass.data[DOMAIN][config_entry.entry_id]
-        if config_entry.options:
-            config.update(config_entry.options)
-        await async_setupPlatformdScript(DSDOMAIN_SWITCH, hass, config, async_add_entities)    
-        hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS]['in_setup'].remove(platform)
-        _LOGGER.debug("%s - async_setup_entry: platform %s complete", DOMAIN, platform)        
-    except Exception as e:
-        _LOGGER.error("%s - async_setup_entry: platform %s failed: %s (%s.%s)", DOMAIN, DSDOMAIN_SWITCH, str(e), e.__class__.__module__, type(e).__name__)  
-    
-class dScriptSwitch(SwitchEntity):
-    """The class for dScriptModule switches."""
+class dScriptLight(LightEntity):
+    """The class for dScriptModule lights."""
     _identifier = None
     _name = None
     _domain = None
@@ -64,7 +48,6 @@ class dScriptSwitch(SwitchEntity):
         self._domain = domain
         self._name = self._board.friendlyname + "_" + domain.capitalize() + str(self._identifier)
         self._state = STATE_UNKNOWN
-        self._icon = 'mdi:power-socket-de'
         self._formatted_mac = format_mac(str(self._board._MACAddress))
         self.uniqueid = self._formatted_mac + "-" + str(self._identifier)
         _LOGGER.debug("%s - %s: __init__ complete (uid: %s)", self._board.friendlyname, self._name, self.uniqueid)
@@ -93,14 +76,14 @@ class dScriptSwitch(SwitchEntity):
     @property
     def unique_id(self) -> str | None:
         """Return a unique identifier for this device."""
-        _LOGGER.debug("%s - %s: unique_id: %s", self._board.friendlyname, self._name, self.uniqueid)
+        _LOGGER.debug("%s - %s: unique_id: %s", self._board.friendlyname, self._name, self.uniqueid) 
         return self.uniqueid
 
     @property
     def available(self) -> bool:
         """Return True if device is available."""
     #    _LOGGER.debug("%s - %s: available", self._board.friendlyname, self._name)
-        if self._board._ConnectedSockets < self._identifier:
+        if self._board._ConnectedLights < self._identifier:
             return False
         elif not self._board.available:
             return False
@@ -129,7 +112,7 @@ class dScriptSwitch(SwitchEntity):
             default_name=self._board.friendlyname,
             sw_version=str(self._board._ApplicationFirmwareMajor) + "." + str(self._board._ApplicationFirmwareMinor),
             configuration_url="http://" + self._board.IP + "/index.htm",
-            suggested_area=self._board.friendlyname.split('_')[-1]            
+            suggested_area=self._board.friendlyname.split('_')[-1]
         )
         _LOGGER.debug("%s - %s: device_info result: %s", self._board.friendlyname, self._name, info)
         return info
@@ -151,9 +134,9 @@ class dScriptSwitch(SwitchEntity):
         try:
             _LOGGER.debug("%s - %s: async_turn_on", self._board.friendlyname, self._name)
             if NATIVE_ASYNC:
-                await self._board.async_SetSocket(self._identifier, STATE_ON)
+                await self._board.async_SetLight(self._identifier,STATE_ON)
             else:
-                self.hass.async_add_executor_job(self._board.SetSocket, self._identifier, STATE_ON)
+                self.hass.async_add_executor_job(self._board.SetLight, self._identifier, STATE_ON)
         except Exception as e:
             _LOGGER.error("%s - %s: async_turn_on failed: %s (%s.%s)", self._board.friendlyname, self._name, str(e), e.__class__.__module__, type(e).__name__)
 
@@ -161,7 +144,7 @@ class dScriptSwitch(SwitchEntity):
         """Turn the light on."""
         try:
             _LOGGER.debug("%s - %s: turn_on", self._board.friendlyname, self._name)
-            self._board.SetSocket(self._identifier,STATE_ON)
+            self._board.SetLight(self._identifier,STATE_ON)
         except Exception as e:
             _LOGGER.error("%s - %s: turn_on failed: %s (%s.%s)", self._board.friendlyname, self._name, str(e), e.__class__.__module__, type(e).__name__)
 
@@ -170,9 +153,9 @@ class dScriptSwitch(SwitchEntity):
         try:
             _LOGGER.debug("%s - %s: async_turn_off", self._board.friendlyname, self._name)
             if NATIVE_ASYNC:
-                await self._board.async_SetSocket(self._identifier, STATE_OFF)
+                await self._board.async_SetLight(self._identifier,STATE_OFF)
             else:
-                self.hass.async_add_executor_job(self._board.SetSocket, self._identifier, STATE_OFF)
+                self.hass.async_add_executor_job(self._board.SetLight, self._identifier, STATE_OFF)
         except Exception as e:
             _LOGGER.error("%s - %s: async_turn_off failed: %s (%s.%s)", self._board.friendlyname, self._name, str(e), e.__class__.__module__, type(e).__name__)        
 
@@ -180,7 +163,7 @@ class dScriptSwitch(SwitchEntity):
         """Turn the light off."""
         try:
             _LOGGER.debug("%s - %s: turn_off", self._board.friendlyname, self._name)
-            self._board.SetSocket(self._identifier,STATE_OFF)
+            self._board.SetLight(self._identifier,STATE_OFF)
         except Exception as e:
             _LOGGER.error("%s - %s: turn_off failed: %s (%s.%s)", self._board.friendlyname, self._name, str(e), e.__class__.__module__, type(e).__name__)
 
@@ -189,9 +172,9 @@ class dScriptSwitch(SwitchEntity):
         try:
             _LOGGER.debug("%s - %s: async_local_poll", self._board.friendlyname, self._name)            
             if NATIVE_ASYNC:
-                state = await self._board.async_GetSocket(self._identifier)
+                state = await self._board.async_GetLight(self._identifier)
             else:
-                state = await self.hass.async_add_executor_job(self._board.GetSocket, self._identifier)
+                state = await self.hass.async_add_executor_job(self._board.GetLight, self._identifier)
             self._state = state
             self.async_write_ha_state()
             _LOGGER.debug("%s - %s: async_local_poll complete: %s", self._board.friendlyname, self._name, state)
@@ -206,7 +189,7 @@ class dScriptSwitch(SwitchEntity):
         """Poll the latest status from device"""
         try:
             _LOGGER.debug("%s - %s: local_poll", self._board.friendlyname, self._name)
-            state=self._board.GetSocket(self._identifier)
+            state=self._board.GetLight(self._identifier)
             self._state = state
             _LOGGER.debug("%s - %s: local_poll complete: %s", self._board.friendlyname, self._name, state)
         except Exception as e:
@@ -217,8 +200,6 @@ class dScriptSwitch(SwitchEntity):
         try:
             _LOGGER.debug("%s - %s: async_local_push", self._board.friendlyname, self._name)
             if not state is None:
-                if state == STATE_ON: state = STATE_OFF
-                elif state == STATE_OFF: state = STATE_ON
                 self._state = state
                 self.async_write_ha_state()    
                 _LOGGER.debug("%s - %s: async_local_push complete: %s", self._board.friendlyname, self._name, state)
@@ -232,8 +213,6 @@ class dScriptSwitch(SwitchEntity):
         try:
             _LOGGER.debug("%s - %s: local_push", self._board.friendlyname, self._name)
             if not state is None:
-                if state == STATE_ON: state = STATE_OFF
-                elif state == STATE_OFF: state = STATE_ON
                 self._state = state
                 _LOGGER.debug("%s - %s: local_push complete: %s", self._board.friendlyname, self._name, state)
             else:

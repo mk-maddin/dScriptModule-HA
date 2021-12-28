@@ -17,24 +17,22 @@ DSDOMAIN_MOTION: Final = 'motion'
 DSDOMAIN_BUTTON: Final = 'button'
 DSDOMAIN_BOARD: Final = 'state'
 
-CONF_ADDANOTHER: Final = 'add_another'
 CONF_AESKEY: Final = 'aes_key'
 CONF_BOARDS: Final = 'boards'
+CONF_SERVER: Final = 'server'
 CONF_ENABLED: Final = 'enabled'
 CONF_LISTENIP: Final = 'listen_ip'
-CONF_SERVER: Final = 'server'
 
 DEFAULT_PORT: Final = 17123
 DEFAULT_PROTOCOL: Final = "binary"
 DEFAULT_AESKEY: Final = ""
 AVAILABLE_PROTOCOLS: Final =  ['modbus','ascii','binary','binaryaes']
 
-DATA_BOARDS: Final = DOMAIN + "_boards"
 DATA_CONFIG: Final = DOMAIN + "config"
-DATA_ENTITIES: Final = DOMAIN + "_entities"
+DATA_DEVICES: Final = DOMAIN + "_devices"
+DATA_BOARDS: Final = DOMAIN + "_boards"
 DATA_SERVER: Final = DOMAIN + "_server"
 DATA_YAML: Final = DOMAIN + "_yaml"
-DATA_PLATFORMS: Final = DOMAIN + '_platforms'
 
 CATTR_FW_VERSION: Final =  "firmware"
 CATTR_IP_ADDRESS: Final =  "ipaddress"
