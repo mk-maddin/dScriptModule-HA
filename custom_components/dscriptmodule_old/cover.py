@@ -32,7 +32,7 @@ from homeassistant.const import (
     STATE_OPENING,
     SERVICE_OPEN,
     SERVICE_CLOSE,
-    SERVICE_HOMEASSISTANT_STOP,
+    CONF_STOP,
 )
 
 from .const import( 
@@ -179,9 +179,9 @@ class dScriptCover(CoverEntity):
         try:
             _LOGGER.debug("%s - %s: stop_cover", self._board.friendlyname, self._name)
             if NATIVE_ASYNC:
-                await self._board.async_SetShutter(self._identifier, SERVICE_HOMEASSISTANT_STOP)
+                await self._board.async_SetShutter(self._identifier, CONF_STOP)
             else:
-                self.hass.async_add_executor_job(self._board.SetShutter, self._identifier, SERVICE_HOMEASSISTANT_STOP)
+                self.hass.async_add_executor_job(self._board.SetShutter, self._identifier, CONF_STOP)
         except Exception as e:
             _LOGGER.error("%s - %s: stop_cover failed: %s (%s.%s)", self._board.friendlyname, self._name, str(e), e.__class__.__module__, type(e).__name__)
 
@@ -189,7 +189,7 @@ class dScriptCover(CoverEntity):
         """Stop the cover."""
         try:
             _LOGGER.debug("%s - %s: stop_cover", self._board.friendlyname, self._name)
-            self._board.SetShutter(self._identifier, SERVICE_HOMEASSISTANT_STOP)
+            self._board.SetShutter(self._identifier, CONF_STOP)
         except Exception as e:
             _LOGGER.error("%s - %s: stop_cover failed: %s (%s.%s)", self._board.friendlyname, self._name, str(e), e.__class__.__module__, type(e).__name__)
 
