@@ -18,15 +18,13 @@ from .board import dSBoardSetup, async_dSBoardPlatformSetup
 from .const import (
     CONF_AESKEY,
     CONF_LISTENIP,
-    DATA_BOARDS,
     DOMAIN,
     NATIVE_ASYNC,
     SERVER_NATIVE_ASYNC,
 )
-from .services import async_registerService
 from .utils import (
     async_TopicToDomain,
-    async_getdSEntityByID,
+    async_getdSDeviceByID,
     async_getdSBoardByIP,
 )
 _LOGGER: Final = logging.getLogger(__name__)
@@ -35,6 +33,7 @@ THISCLASS = 'dScriptBuiltInServer'
 
 class dScriptBuiltInServer(object):
     """The class for dScriptServer running internally"""
+
     def __init__(self, hass, config, server_config) -> None:
         """Initialize the object."""
         _LOGGER.debug("%s: __init__", THISCLASS)
@@ -53,7 +52,7 @@ class dScriptBuiltInServer(object):
         self.dScriptServer.addEventHandler('getmotion',self.dSBoardDeviceUpdate)
         self.dScriptServer.addEventHandler('getbutton',self.dSBoardDeviceUpdate)
         
-        asyncio.run_coroutine_threadsafe(self.async_dSServerRegisterServices(), self.hass.loop)
+        asyncio.run_coroutine_threadsafe(self.async_dSServerRegisterServices(), self.hass.loop)            
         _LOGGER.debug("%s: __init__: complete", THISCLASS)
 
     async def async_dSServerRegisterServices(self) -> None:
@@ -64,17 +63,15 @@ class dScriptBuiltInServer(object):
             self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, self.async_dSServerStop)
 
             _LOGGER.debug("%s - async_dSServerRegisterServices: regsiter dScriptServer specific services", THISCLASS)
-            await async_registerService(self.hass, "serverstop", self.async_dSServerStop)
-            await async_registerService(self.hass, "serverstart", self.async_dSServerStart)
+            self.hass.services.async_register(DOMAIN, "serverstop", self.async_dSServerStop)
+            self.hass.services.async_register(DOMAIN, "serverstart", self.async_dSServerStart)
         except Exception as e:
             _LOGGER.error("%s - async_dSServerRegisterServices: failed %s", str(e), THISCLASS)        
         
-    async def async_dSServerStart(self, event) -> None | bool:
+    async def async_dSServerStart(self, event) -> None:
         """Start the dScriptServer instance"""
         try:
             _LOGGER.debug("%s - async_dSServerStart: Start the dScriptServer", THISCLASS)
-            if self.dScriptServer.State == True:
-                return None
             if SERVER_NATIVE_ASYNC:
                 await self.dScriptServer.async_StartServer()
             else:
@@ -86,14 +83,11 @@ class dScriptBuiltInServer(object):
                 await asyncio.sleep(1)
         except Exception as e:
             _LOGGER.error("%s - async_dSServerStart: Could not start dScriptServer: %s", str(e), THISCLASS)
-            return False
-            
-    async def async_dSServerStop(self, event) -> None | bool:
+
+    async def async_dSServerStop(self, event) -> None:
         """Stop the running dScriptServer instance"""
         try:
             _LOGGER.debug("%s - async_dSServerStop: Stop the dScriptServer", THISCLASS)
-            if self.dScriptServer.State == False:
-                return None
             if SERVER_NATIVE_ASYNC:
                 await self.dScriptServer.async_StopServer()
             else:
@@ -106,8 +100,7 @@ class dScriptBuiltInServer(object):
                 await asyncio.sleep(1)
         except Exception as e:
             _LOGGER.error("%s - async_dSServerStop: Could not stop dScriptServer: %s", str(e), THISCLASS)
-            return False
-            
+
     async def async_dSBoardHeartbeat(self, sender, event) -> None:
         """Handle incoming hearbeat connection of any board"""
         try:
@@ -116,14 +109,7 @@ class dScriptBuiltInServer(object):
             if not dSBoard:
                 _LOGGER.debug("%s - async_dSBoardHearbeat: new board", sender.sender)
                 dSBoard = await self.hass.async_add_executor_job(dSBoardSetup, self.hass, self.config, sender.sender, self.dScriptServer.Port, self.dScriptServer._Protocol, self.dScriptServer._AESKey, True)
-                countBoards = len(self.hass.data[DOMAIN][DATA_BOARDS])
-                await asyncio.sleep(7) 
-                countBoardsNew = len(self.hass.data[DOMAIN][DATA_BOARDS]) 
-                if countBoards == countBoardsNew:
-                    _LOGGER.debug("%s - async_dSBoardHearbeat: setup platforms for boards (%s = %s)", sender.sender, countBoards, countBoardsNew)
-                    self.hass.async_create_task(async_dSBoardPlatformSetup(self.hass, self.config, dSBoard))
-                else:
-                    _LOGGER.debug("%s - async_dSBoardHearbeat: platform setup for board will be part of other board just detected %s", sender.sender, dSBoard.friendlyname)
+                self.hass.async_create_task(async_dSBoardPlatformSetup(self.hass, self.config, dSBoard))
             else:
                 _LOGGER.debug("%s - async_dSBoardHearbeat: known board %s", sender.sender, dSBoard.friendlyname)
                 dSBoard.available = True
@@ -183,12 +169,13 @@ class dScriptBuiltInServer(object):
         except Exception as e:
             _LOGGER.error("%s - dSBoardGetConfig: failed: %s (%s.%s)", sender.sender, str(e), e.__class__.__module__, type(e).__name__)
 
+
     async def async_dSBoardDeviceUpdate(self, sender, event) -> None:
         """Perform the update action for specified device if device trigger was received"""
         try:
             _LOGGER.debug("%s - async_dSBoardDeviceUpdate: handle %s", sender.sender, event)
             domain = await async_TopicToDomain(sender.topic)
-            dSDevice = await async_getdSEntityByID(self.hass, sender.sender, sender.identifier, domain)
+            dSDevice = await async_getdSDeviceByID(self.hass, sender.sender, sender.identifier, domain)
             _LOGGER.debug("%s - async_dSBoardDeviceUpdate: dSDevice is %s", sender.sender, dSDevice)
             if not dSDevice is None:
                 _LOGGER.debug("%s - async_dSBoardDeviceUpdate: update push %s to state %s", sender.sender, dSDevice.entity_id, sender.value)

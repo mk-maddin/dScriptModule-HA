@@ -1,7 +1,7 @@
 {
   "domain": "dscriptmodule",
   "name": "robot-electronics dScript modules",
-  "version": "3.5.0",
+  "version": "3.4.5",
   "config_flow": "true",
   "documentation": "https://github.com/mk-maddin/dScriptModule-HA",
   "requirements": ["dScriptModule>=3.4.0"],

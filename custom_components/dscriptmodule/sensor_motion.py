@@ -100,9 +100,9 @@ class dScriptMotionSensor(Entity):
         _LOGGER.debug("%s - %s: device_info", self._board.friendlyname, self._name)
         info = DeviceInfo(
             identifiers={(DOMAIN, self._formatted_mac)},
-            default_manufacturer=MANUFACTURER,
-            default_model=self._board._ModuleID,
-            default_name=self._board.friendlyname,
+            manufacturer=MANUFACTURER,
+            model=self._board._ModuleID,
+            name=self._board.friendlyname,
             sw_version=str(self._board._ApplicationFirmwareMajor) + "." + str(self._board._ApplicationFirmwareMinor),
             configuration_url="http://" + self._board.IP + "/index.htm",
             suggested_area=self._board.friendlyname.split('_')[-1]

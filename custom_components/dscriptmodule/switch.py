@@ -17,35 +17,19 @@ from homeassistant.const import (
     STATE_UNKNOWN,
 )
 
-from .utils import async_setupPlatformdScript
 from .const import(
-    DATA_PLATFORMS,        
     DOMAIN,
     DSDOMAIN_SWITCH,
     MANUFACTURER,
     NATIVE_ASYNC,
 ) 
 _LOGGER: Final = logging.getLogger(__name__)
-platform = 'switch'
 
-async def async_setup_platform(hass: HomeAssistant, config: ConfigEntry, async_add_entities: AddEntitiesCallback, discovery_info: Optional[DiscoveryInfoType] = None) -> None:
+async def async_setup_platform(hass: HomeAssistant, config: ConfigEntry, async_add_entities: AddEntitiesCallback, discovery_info=None) -> None:
     """Set up the dScriptModule switch platform."""
-    _LOGGER.debug("%s - async_setup_platform: platform %s", DOMAIN, DSDOMAIN_SWITCH)
+    from .utils import async_setupPlatformdScript
     await async_setupPlatformdScript(DSDOMAIN_SWITCH, hass, config, async_add_entities, discovery_info)
 
-async def async_setup_entry(hass: HomeAssistant, config_entry: config_entries.ConfigEntry, async_add_entities):
-    """Setup sensors from a config entry created in the integrations UI."""
-    _LOGGER.debug("%s - async_setup_entry: platform %s", DOMAIN, DSDOMAIN_SWITCH)
-    try:
-        config = hass.data[DOMAIN][config_entry.entry_id]
-        if config_entry.options:
-            config.update(config_entry.options)
-        await async_setupPlatformdScript(DSDOMAIN_SWITCH, hass, config, async_add_entities)    
-        hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS]['in_setup'].remove(platform)
-        _LOGGER.debug("%s - async_setup_entry: platform %s complete", DOMAIN, platform)        
-    except Exception as e:
-        _LOGGER.error("%s - async_setup_entry: platform %s failed: %s (%s.%s)", DOMAIN, DSDOMAIN_SWITCH, str(e), e.__class__.__module__, type(e).__name__)  
-    
 class dScriptSwitch(SwitchEntity):
     """The class for dScriptModule switches."""
     _identifier = None
@@ -124,9 +108,9 @@ class dScriptSwitch(SwitchEntity):
         _LOGGER.debug("%s - %s: device_info", self._board.friendlyname, self._name)
         info = DeviceInfo(
             identifiers={(DOMAIN, self._formatted_mac)},
-            default_manufacturer=MANUFACTURER,
-            default_model=self._board._ModuleID,
-            default_name=self._board.friendlyname,
+            manufacturer=MANUFACTURER,
+            model=self._board._ModuleID,
+            name=self._board.friendlyname,
             sw_version=str(self._board._ApplicationFirmwareMajor) + "." + str(self._board._ApplicationFirmwareMinor),
             configuration_url="http://" + self._board.IP + "/index.htm",
             suggested_area=self._board.friendlyname.split('_')[-1]            

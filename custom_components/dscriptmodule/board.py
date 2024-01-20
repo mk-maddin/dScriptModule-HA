@@ -15,7 +15,6 @@ from homeassistant.helpers import discovery
 from dScriptModule import dScriptBoard
 from .const import (
     DATA_BOARDS,
-    DATA_PLATFORMS,
     DEFAULT_AESKEY,
     DEFAULT_PORT,
     DEFAULT_PROTOCOL,
@@ -25,35 +24,16 @@ from .const import (
 from .utils import (
     async_getdSBoardByIP,
     async_getdSBoardByMAC,
-    ProgrammingDebug,
-    async_ProgrammingDebug,
 )
 
 _LOGGER: Final = logging.getLogger(__name__)
 
-async def async_dSBoardPlatformSetup(hass, config_entry, dSBoard=None) -> None:
+async def async_dSBoardPlatformSetup(hass, config, dSBoard=None) -> None:
     """Setup different platforms supported by dScriptModule"""
-    _LOGGER.debug("%s - async_dSBoardPlatformSetup", DOMAIN)
-    try:
-        hass.data[DOMAIN][config_entry.entry_id].setdefault(DATA_PLATFORMS, {'running': False,'loaded':[], 'in_setup':[]})
-        while hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS]['running'] is True:
-            await asyncio.sleep(100e-3) #100ms sleep
-        hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS]['running'] = True
-        for platform in SUPPORTED_PLATFORMS:
-            if platform in hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS]['loaded']:
-                while platform in hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS]['in_setup']:
-                    await asyncio.sleep(100e-3) #100ms sleep
-                _LOGGER.debug("%s - async_dSBoardPlatformSetup: unload platform: %s",DOMAIN , platform)
-                await hass.config_entries.async_forward_entry_unload(config_entry, platform)
-            if not platform in hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS]:
-                hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS]['loaded'].append(platform)
-            _LOGGER.debug("%s - async_dSBoardPlatformSetup: load platform: %s",DOMAIN , platform)
-            hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS]['in_setup'].append(platform)            
-            hass.async_create_task(hass.config_entries.async_forward_entry_setup(config_entry, platform))
-        hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS]['running'] = False
-    except Exception as e:
-        _LOGGER.error("%s - async_dSBoardPlatformSetup: failed: %s (%s.%s)", DOMAIN, str(e), e.__class__.__module__, type(e).__name__)
-        hass.data[DOMAIN][config_entry.entry_id][DATA_PLATFORMS]['running'] = False
+    for platform in SUPPORTED_PLATFORMS:
+        _LOGGER.debug("async_dSBoardPlatformSetup: discover platform: %s - %s",DOMAIN, platform)
+        hass.async_create_task(
+            discovery.async_load_platform(hass, platform, DOMAIN, dSBoard, config))
 
 class dScriptBoardHA(dScriptBoard):
     """Custom variant of dScriptBoard object for HA"""
@@ -89,7 +69,7 @@ def dSBoardSetup(hass, config, host, port=DEFAULT_PORT, protocol=DEFAULT_PROTOCO
                     m = '0' + m
                 mac = mac + ':' + m
             mac = mac.lstrip(':')
-            _LOGGER.debug("%s - dSBoardSetup: MAC %s updated to %s", host, dSBoard._MACAddress, mac)
+            _LOGGER.info("%s - dSBoardSetup: MAC %s updated to %s", host, dSBoard._MACAddress, mac)
             dSBoard._MACAddress = mac
 
         _LOGGER.debug("%s - dSBoardSetup: Firmware: %s.%s | App: %s.%s | Custom: %s | MAC: %s | IP: %s | Protocol: %s",
@@ -104,12 +84,7 @@ def dSBoardSetup(hass, config, host, port=DEFAULT_PORT, protocol=DEFAULT_PROTOCO
             else:
                 return True
 
-        #_LOGGER.debug("%s - async_setup_entry: config is %s", DOMAIN, config)
-        #ProgrammingDebug(config)
-        #_LOGGER.debug("%s - async_setup_entry: config END --", DOMAIN)                  
-                
-        #manual_entities = config[DOMAIN].get(CONF_ENTITIES)
-        manual_entities = config.data.get(CONF_ENTITIES)
+        manual_entities = config[DOMAIN].get(CONF_ENTITIES)
         if not manual_entities is None:
             _LOGGER.debug("%s - dSBoardSetup: setting friendly name", dSBoard._HostName)
             for entity in manual_entities:
@@ -120,7 +95,6 @@ def dSBoardSetup(hass, config, host, port=DEFAULT_PORT, protocol=DEFAULT_PROTOCO
         _LOGGER.debug("%s - dSBoardSetup: MAC: %s | FriendlyName %s", dSBoard._HostName, dSBoard._MACAddress, dSBoard.friendlyname)
         
         hass.data[DOMAIN][DATA_BOARDS].append(dSBoard)
-        _LOGGER.debug("%s - dSBoardSetup: %s known boards", DOMAIN, len(hass.data[DOMAIN][DATA_BOARDS]))
         if returnObj:
             return dSBoard
         else:
