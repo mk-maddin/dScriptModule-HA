@@ -25,6 +25,9 @@ from .const import (
     DSCRIPT_TOPICTOENTITYTYPE,
     KNOWN_DATA,
 )
+from .entities import (
+    create_entity_unique_id
+)
 from .utils import (
     async_dScript_setup_entry,
     ProgrammingDebug,
@@ -86,7 +89,7 @@ async def async_dScript_ValidateBoardConfig(hass: HomeAssistant, entry: ConfigEn
             _LOGGER.debug("%s - %s: async_dScript_ValidateBoardConfig: updating board entities count", entry.entry_id, dSBoard.name)
             await dSBoard.async_GetConfig()
             platforms_add_entities=[]
-            platforms_remove_entities={}           
+            platforms_remove_entities=[]        
             for platform in counts_pre.keys():
                 if platform == 'switch' and not dSBoard._CustomFirmeware: pattr = DSCRIPT_ENTITYTYPETOCOUNTATTR['switch_native']
                 else: pattr=DSCRIPT_ENTITYTYPETOCOUNTATTR[platform]                
@@ -95,10 +98,14 @@ async def async_dScript_ValidateBoardConfig(hass: HomeAssistant, entry: ConfigEn
                 elif counts_pre[platform] < count_post: platforms_add_entities.append(platform)
                 elif counts_pre[platform] > count_post:
                     for identifier in list(range(int(count_post)+1,int(counts_pre[platform])+1):
-                        uniqueid =
+                        uniqueid = create_entity_unique_id(dSBoard, identifier, platform)
+                        entity_object = async_dScript_GetEntityByUniqueID(hass, entry, uniqueid, dSBoard.MACAddress)
+                        if entity_object is None:
+                            _LOGGER.warning("%s - %s: async_dScript_ValidateBoardConfig: unable to find remove entity: %s", entry.entry_id, dSBoard.name, uniqueid)
+                            continue
+                        platforms_remove_entities.append(entity_object)
 
             if platforms_remove_entities:
-                for platform in 
 #            To-Be-Done 
                 _LOGGER.debug("%s - %s: async_dScript_ValidateBoardConfig: remove non existing entities (TBD)", entry.entry_id, dSBoard.name)
 #                await async_dScript_remove_entry(hass=hass, entry=entry, dSEntityTypes=platforms_add_entities, dSBoardList=[dSBoard])
