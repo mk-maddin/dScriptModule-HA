@@ -4,8 +4,9 @@ from __future__ import annotations
 from typing import Final
 import logging
 import asyncio
-import os
+import aiofiles
 import json
+import os
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -61,11 +62,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         _LOGGER.debug("%s - async_setup_entry: Searching known data file: %s", entry.entry_id, KNOWN_DATA_FILE)
         if os.path.isfile(KNOWN_DATA_FILE):
-            async with aiofiles.open(KNOWN_DATA_FILE, 'r') as j:
-                known_data = json.load(j)
-                yaml_cfg=yaml.safe_load(await y.read())
-                _LOGGER.debug("%s - async_setup_entry: Got known file data: %s", entry.entry_id, known_data)
-                entry_data[KNOWN_DATA] = known_data.get(DOMAIN, {})
+            async with aiofiles.open(KNOWN_DATA_FILE, mode='r') as j:
+                known_data = json.loads(await j.read())
+            _LOGGER.debug("%s - async_setup_entry: Got known file data: %s", entry.entry_id, known_data)
+            entry_data[KNOWN_DATA] = known_data.get(DOMAIN, {})
     except Exception as e:
         _LOGGER.error("%s - async_setup_entry: Searching known data failed: %s (%s.%s)", DOMAIN, str(e), e.__class__.__module__, type(e).__name__)
         return False

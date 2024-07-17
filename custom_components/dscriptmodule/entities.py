@@ -36,12 +36,13 @@ def create_entity_unique_id(dSBoard: dScriptBoardHA, identifier: int, dSEntityTy
 def create_entity_id(dSBoard: dScriptBoardHA, identifier: int, dSEntityType: str): 
     """Create a entity id for entites."""
     entity_id=''
-    if hasattr(dSBoard, CONF_FRIENDLY_NAME):
-        entity_id=str(dSBoard[CONF_FRIENDLY_NAME])+'_'+dSEntityType+str(identifier)
-    elif hasattr(dSBoard, CONF_NAME):
-        entity_id=str(dSBoard[CONF_NAME])+'_'+dSEntityType+str(identifier)
-    else:
-        entity_id=create_entity_unique_id(dSBoard, identifier, dSEntityType)
+    entity_id=str(dSBoard.friendlyname)+'_'+dSEntityType+str(identifier)
+    #if hasattr(dSBoard, CONF_FRIENDLY_NAME):
+    #    entity_id=str(dSBoard[CONF_FRIENDLY_NAME])+'_'+dSEntityType+str(identifier)
+    #elif hasattr(dSBoard, CONF_NAME):
+    #    entity_id=str(dSBoard[CONF_NAME])+'_'+dSEntityType+str(identifier)
+    #else:
+    #    entity_id=create_entity_unique_id(dSBoard, identifier, dSEntityType)
     entity_id=entity_id.replace(':','')
     entity_id=entity_id.replace('-','_')
     entity_id=entity_id.replace(' ','_')
@@ -64,7 +65,7 @@ class dScriptPlatformEntity(Entity):
             self._entry_id = self._entry.entry_id
             self.hass = hass
 
-            _LOGGER.debug("%s - %s: __init__: %s.%s", entry.entry_id, dSBoard.name, dSEntityType, str(identifier))
+            _LOGGER.debug("%s - %s: __init__: %s%s", entry.entry_id, dSBoard.name, dSEntityType, str(identifier))
             self._identifier = identifier
             self._board = dSBoard
             self._dSEntityType = dSEntityType
@@ -73,11 +74,10 @@ class dScriptPlatformEntity(Entity):
             #_LOGGER.debug("%s - %s.%s: __init__ kwargs = %s", entry.entry_id, self._board.name, self.uniqueid, kwargs)
             self._init_platform_specific(**kwargs)
             self.entity_id = generate_entity_id(self._platform+'.{}', self._entity_id, hass=hass)
-            #self.uniqueid = DOMAIN.lower()+"_"+str(self._board.MACAddress).replace(':','')+'_'+self._dSEntityType+str(self._identifier)
             self.uniqueid = create_entity_unique_id(self._board, self._identifier, self._dSEntityType)
-            _LOGGER.debug("%s - %s.%s: __init__ complete - entity_id: %s", entry.entry_id, self._board.name, self.uniqueid, self.entity_id)
+            #_LOGGER.debug("%s - %s: %s: __init__ complete - entity_id: %s", entry.entry_id, self._board.name, self.uniqueid, self.entity_id)
         except Exception as e:            
-            _LOGGER.error("%s - %s.%s: __init__ failed: %s (%s.%s)", entry.entry_id, self._board.name, str(identifier), str(e), e.__class__.__module__, type(e).__name__)
+            _LOGGER.error("%s - %s - %s%s: __init__ failed: %s (%s.%s)", entry.entry_id, self._board.name, str(dSEntityType), str(identifier), str(e), e.__class__.__module__, type(e).__name__)
             return None
 
 

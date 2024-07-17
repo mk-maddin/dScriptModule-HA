@@ -24,7 +24,7 @@ from .utils import(
 
 
 _LOGGER: Final = logging.getLogger(__name__)
-PLATFORM = 'sensor_button'
+PLATFORM = 'sensor'
 
 #async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
 #    """Async: Set up the sensor_board platform."""

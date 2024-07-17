@@ -1,7 +1,7 @@
 {
     "dscriptmodule": {
       "04:91:62:08:66:98": {
-        "friendly_name": "dS-wohnzimmer"
+        "friendly_name": "dS-wohnzimmer",
         "ip_address": "192.168.28.45"
       },
       "04:91:62:70:9a:73": {
