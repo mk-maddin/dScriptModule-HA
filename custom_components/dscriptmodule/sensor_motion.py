@@ -27,9 +27,9 @@ from .utils import(
 _LOGGER: Final = logging.getLogger(__name__)
 PLATFORM = 'sensor_motion'
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
-    """Async: up the sensor_motion platform."""
-    await async_dScript_setup_entry(hass=hass, entry=entry, async_add_entities=async_add_entities, dSEntityTypes=[PLATFORM])
+#async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+#    """Async: Set up the sensor_board platform."""
+#    await async_dScript_setup_entry(hass=hass, entry=entry, async_add_entities=async_add_entities, dSEntityTypes=[PLATFORM])
 
 
 class dScriptMotionSensor(dScriptPlatformEntity):

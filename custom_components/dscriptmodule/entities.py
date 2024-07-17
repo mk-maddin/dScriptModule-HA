@@ -37,9 +37,9 @@ def create_entity_id(dSBoard: dScriptBoardHA, identifier: int, dSEntityType: str
     """Create a entity id for entites."""
     entity_id=''
     if hasattr(dSBoard, CONF_FRIENDLY_NAME):
-        entity_id=str(getattr(dSBoard, CONF_FRIENDLY_NAME))+'_'+dSEntityType+str(identifier)
+        entity_id=str(dSBoard[CONF_FRIENDLY_NAME])+'_'+dSEntityType+str(identifier)
     elif hasattr(dSBoard, CONF_NAME):
-        entity_id=str(getattr(dSBoard, CONF_NAME))+'_'+dSEntityType+str(identifier)
+        entity_id=str(dSBoard[CONF_NAME])+'_'+dSEntityType+str(identifier)
     else:
         entity_id=create_entity_unique_id(dSBoard, identifier, dSEntityType)
     entity_id=entity_id.replace(':','')
