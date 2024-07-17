@@ -21,7 +21,10 @@ from homeassistant.const import (
     STATE_UNKNOWN,
 )
 
-from .entities import dScriptPlatformEntity
+from .entities import (
+    dScriptPlatformEntity,
+    create_entity_id,
+)
 from .const import(
     CATTR_FW_VERSION,
     CATTR_IP_ADDRESS,
@@ -56,7 +59,7 @@ class dScriptBoardSensor(dScriptPlatformEntity):
 
     def _init_platform_specific(self, **kwargs):
         """Platform specific init actions"""
-        _LOGGER.debug("%s - %s.%s: _init_platform_specific", self._entry_id, self._board.name, self.uniqueid)
+        _LOGGER.debug("%s - %s %s%s: _init_platform_specific", self._entry_id, self._board.name, self._dSEntityType, self._identifier)
         self._firmware = str(self._board._SystemFirmwareMajor) + "." + str(self._board._SystemFirmwareMinor)
         self._software = str(self._board._ApplicationFirmwareMajor) + "." + str(self._board._ApplicationFirmwareMinor)
         self._onlineurl= "http://" + self._board.IP + "/index.htm"
