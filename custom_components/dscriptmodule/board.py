@@ -50,8 +50,8 @@ async def async_setup_dScriptBoard(hass: HomeAssistant, entry: ConfigEntry, tcp_
         _LOGGER.debug("%s - %s: async_setup_dScriptBoard: merge known data for: %s", entry.entry_id, tcp_ip, dSBoard.MACAddress)
         dSBoardKnown = entry_data[KNOWN_DATA].get(dSBoard.MACAddress, None)
         if not dSBoardKnown is None:
-            _LOGGER.debug("%s - %s: async_setup_dScriptBoard: found known data for board: %s", entry.entry_id, tcp_ip, dSBoard.MACAddress)
             dSBoard.friendlyname = dSBoardKnown.get(CONF_FRIENDLY_NAME, dSBoard.friendlyname)
+            _LOGGER.debug("%s - %s: async_setup_dScriptBoard: found known data for board: %s - %s", entry.entry_id, tcp_ip, dSBoard.MACAddress, dSBoard.friendlyname)
 
         _LOGGER.debug("%s - %s: async_setup_dScriptBoard: add to entry_data", entry.entry_id, tcp_ip)
         #entry_data=hass.data[DOMAIN][entry.entry_id]

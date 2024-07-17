@@ -16,7 +16,8 @@ from homeassistant.helpers.entity import (
     generate_entity_id,
 )
 from homeassistant.const import (
-    STATE_UNKNOWN,   
+    CONF_FRIENDLY_NAME,
+    STATE_UNKNOWN,
 )
 
 from .const import (
@@ -51,13 +52,13 @@ class dScriptPlatformEntity(Entity):
             self._identifier = identifier
             self._board = dSBoard
             self._dSEntityType = dSEntityType
-            self._entity_id = str(self._board.name).replace('-','_')+'_'+self._dSEntityType+str(self._identifier)
+            self._entity_id = str(self._board.get(CONF_FRIENDLY_NAME, self._board.name)).replace('-','_')+'_'+self._dSEntityType+str(self._identifier)
 
             #_LOGGER.debug("%s - %s.%s: __init__ kwargs = %s", entry.entry_id, self._board.name, self.uniqueid, kwargs)
             self._init_platform_specific(**kwargs)
             self.entity_id = generate_entity_id(self._platform+'.{}', self._entity_id, hass=hass)
             self.uniqueid = DOMAIN.lower()+"_"+str(self._board.MACAddress).replace(':','')+'_'+self._dSEntityType+str(self._identifier)
-            _LOGGER.debug("%s - %s.%s: __init__ complete", entry.entry_id, self._board.name, self.uniqueid)
+            _LOGGER.debug("%s - %s.%s: __init__ complete - entity_id: %s", entry.entry_id, self._board.name, self.uniqueid, self.entity_id)
         except Exception as e:            
             _LOGGER.error("%s - %s.%s: __init__ failed: %s (%s.%s)", entry.entry_id, self._board.name, str(identifier), str(e), e.__class__.__module__, type(e).__name__)
             return None
