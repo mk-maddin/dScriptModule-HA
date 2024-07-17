@@ -9,7 +9,7 @@ from typing import (
 import logging
 import asyncio
 #import json
-import jsonpickle
+#import jsonpickle
 
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
@@ -33,20 +33,22 @@ async def async_get_config_entry_diagnostics( hass: HomeAssistant, entry: Config
         diag: dict[str, Any] = { "config": async_redact_data(entry.as_dict(), REDACT_CONFIG) }
     except Exception as e:
         _LOGGER.error("%s - async_get_config_entry_diagnostics %s: Adding config entry configuration to output failed: %s (%s.%s)", entry.entry_id, platform, str(e), e.__class__.__module__, type(e).__name__)
-        #return False
+        return diag
 
     try:
         _LOGGER.debug("%s - async_get_config_entry_diagnostics %s: Add domain data", entry.entry_id, platform)
         diag["data_domain"] = async_redact_data(hass.data[DOMAIN], REDACT_DOMAIN_DATA)
     except Exception as e:
         _LOGGER.error("%s - async_get_config_entry_diagnostics %s: Add domain data failed: %s (%s.%s)", entry.entry_id, platform, str(e), e.__class__.__module__, type(e).__name__)
-        #return False        
+        return diag
 
     try:
         _LOGGER.debug("%s - async_get_config_entry_diagnostics %s: Add python module [dScriptModule] version", entry.entry_id, platform)
-        diag["py_module_dScriptModule"] = version('dScriptModule')
+        diag["dScriptModule_module"] = version('dScriptModule')
+        diag["aiofiles_module"] = version('aiofiles')
+        diag["getmac_module"] = version('getmac')
     except Exception as e:
         _LOGGER.error("%s - async_get_config_entry_diagnostics %s: Add python module [dScriptModule] version failed: %s (%s.%s)", entry.entry_id, platform, str(e), e.__class__.__module__, type(e).__name__)
-        #return False
+        return diag
 
     return diag

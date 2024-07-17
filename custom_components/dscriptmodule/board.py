@@ -47,9 +47,10 @@ async def async_setup_dScriptBoard(hass: HomeAssistant, entry: ConfigEntry, tcp_
             _LOGGER.warning("%s - %s: async_setup_dScriptBoard: board already exists: %s", entry.entry_id, tcp_ip, dSBoard.name)
             return None
 
-        _LOGGER.debug("%s - %s: async_setup_dScriptBoard: merge known data for: %s", entry.entry_id, tcp_ip, dSBoard.MACAddress)        
+        _LOGGER.debug("%s - %s: async_setup_dScriptBoard: merge known data for: %s", entry.entry_id, tcp_ip, dSBoard.MACAddress)
         dSBoardKnown = entry_data[KNOWN_DATA].get(dSBoard.MACAddress, None)
         if not dSBoardKnown is None:
+            _LOGGER.debug("%s - %s: async_setup_dScriptBoard: found known data for board: %s", entry.entry_id, tcp_ip, dSBoard.MACAddress)
             dSBoard.friendlyname = dSBoardKnown.get(CONF_FRIENDLY_NAME, dSBoard.friendlyname)
 
         _LOGGER.debug("%s - %s: async_setup_dScriptBoard: add to entry_data", entry.entry_id, tcp_ip)
@@ -78,7 +79,7 @@ async def async_dScript_ValidateBoardConfig(hass: HomeAssistant, entry: ConfigEn
         else:
             _LOGGER.debug("%s - %s: async_dScript_ValidateBoardConfig: storing board entities count", entry.entry_id, dSBoard.name)
             counts_pre = {}
-            for platform in DSCRIPT_TOPICTOENTITYTYPE.values():                
+            for platform in DSCRIPT_TOPICTOENTITYTYPE.values():
                 if platform == 'switch' and not dSBoard._CustomFirmeware: pattr = DSCRIPT_ENTITYTYPETOCOUNTATTR['switch_native']
                 else: pattr=DSCRIPT_ENTITYTYPETOCOUNTATTR[platform]
                 if not hasattr(dSBoard, pattr):
@@ -92,12 +93,12 @@ async def async_dScript_ValidateBoardConfig(hass: HomeAssistant, entry: ConfigEn
             platforms_remove_entities=[]        
             for platform in counts_pre.keys():
                 if platform == 'switch' and not dSBoard._CustomFirmeware: pattr = DSCRIPT_ENTITYTYPETOCOUNTATTR['switch_native']
-                else: pattr=DSCRIPT_ENTITYTYPETOCOUNTATTR[platform]                
+                else: pattr=DSCRIPT_ENTITYTYPETOCOUNTATTR[platform]
                 count_post = getattr(dSBoard, pattr, 0)
                 if counts_pre[platform] == count_post: continue
                 elif counts_pre[platform] < count_post: platforms_add_entities.append(platform)
                 elif counts_pre[platform] > count_post:
-                    for identifier in list(range(int(count_post)+1,int(counts_pre[platform])+1):
+                    for identifier in list(range(int(count_post)+1,int(counts_pre[platform])+1)):
                         uniqueid = create_entity_unique_id(dSBoard, identifier, platform)
                         entity_object = async_dScript_GetEntityByUniqueID(hass, entry, uniqueid, dSBoard.MACAddress)
                         if entity_object is None:

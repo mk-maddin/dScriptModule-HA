@@ -1,0 +1,67 @@
+{
+    "dscriptmodule": {
+      "04:91:62:08:66:98": {
+        "friendly_name": "dS-wohnzimmer"
+        "ip_address": "192.168.28.45"
+      },
+      "04:91:62:70:9a:73": {
+        "friendly_name": "dS-windfang",
+        "ip_address": "192.168.28.46"
+      },
+      "68:27:19:1e:b6:1a": {
+        "friendly_name": "dS-speis",
+        "ip_address": "192.168.28.47"
+      },
+      "04:91:62:08:75:8b": {
+        "friendly_name": "dS-gaeste",
+        "ip_address": "192.168.28.51"
+      },
+      "68:27:19:1e:b4:e0": {
+        "friendly_name": "dS-ankleide",
+        "ip_address": "192.168.28.55"
+      },
+      "04:91:62:70:97:c2": {
+        "friendly_name": "dS-schlafen",
+        "ip_address": "192.168.28.56"
+      },
+      "04:91:62:70:99:17": {
+        "friendly_name": "dS-hauptbad",
+        "ip_address": "192.168.28.53"
+      },
+      "04:91:62:70:99:38": {
+        "friendly_name": "dS-gaestebad",
+        "ip_address": "192.168.28.77"
+      },
+      "04:91:62:70:97:c1": {
+        "friendly_name": "dS-kind",
+        "ip_address": "192.168.28.81"
+      },
+      "68:27:19:1e:b6:23": {
+        "friendly_name": "dS-dachboden",
+        "ip_address": "192.168.28.54"
+      },
+      "04:91:62:08:75:39": {
+        "friendly_name": "dS-buero",
+        "ip_address": "192.168.28.80"
+      },
+      "04:91:62:81:aa:f3": {
+        "friendly_name": "dS-kueche",
+        "ip_address": "192.168.28.52"
+      },
+      "04:91:62:08:76:b4": {
+        "friendly_name": "dS-gang",
+        "ip_address": "192.168.28.29"
+      },
+      "68:27:19:1e:b4:45": {
+        "friendly_name": "dS-garderobe",
+        "ip_address": "192.168.28.48"
+      },
+      "04:91:62:70:98:d3": {
+        "friendly_name": "dS-technik",
+        "ip_address": "192.168.28.59"
+      },
+      "04:91:62:08:76:a7": {
+        "friendly_name": "dS-test"
+      }
+    }
+}

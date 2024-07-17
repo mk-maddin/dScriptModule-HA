@@ -60,9 +60,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     try:
         _LOGGER.debug("%s - async_setup_entry: Searching known data file: %s", entry.entry_id, KNOWN_DATA_FILE)
-        if os.path.isfile(KNOWN_DATA_FILE):            
-            with open(KNOWN_DATA_FILE, 'r') as stream:
-                known_data = json.load(stream)
+        if os.path.isfile(KNOWN_DATA_FILE):
+            async with aiofiles.open(KNOWN_DATA_FILE, 'r') as j:
+                known_data = json.load(j)
+                yaml_cfg=yaml.safe_load(await y.read())
                 _LOGGER.debug("%s - async_setup_entry: Got known file data: %s", entry.entry_id, known_data)
                 entry_data[KNOWN_DATA] = known_data.get(DOMAIN, {})
     except Exception as e:
@@ -88,7 +89,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             platforms.append(p)
 
         for platform in list(set(platforms)):
-            print(f'platform:', platform)
             _LOGGER.debug("%s - async_setup_entry: Trigger setup for platform: %s ", entry.entry_id, platform)
             hass.async_create_task(hass.config_entries.async_forward_entry_setup(entry, platform))
     except Exception as e:
