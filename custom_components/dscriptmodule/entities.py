@@ -17,6 +17,7 @@ from homeassistant.helpers.entity import (
 )
 from homeassistant.const import (
     CONF_FRIENDLY_NAME,
+    CONF_NAME,
     STATE_UNKNOWN,
 )
 
@@ -31,6 +32,21 @@ _LOGGER: Final = logging.getLogger(__name__)
 def create_entity_unique_id(dSBoard: dScriptBoardHA, identifier: int, dSEntityType: str): 
     """Create a unique id for entites."""
     return DOMAIN.lower()+"_"+str(dSBoard.MACAddress).replace(':','')+'_'+dSEntityType+str(identifier)
+
+def create_entity_id(dSBoard: dScriptBoardHA, identifier: int, dSEntityType: str): 
+    """Create a entity id for entites."""
+    entity_id=''
+    if hasattr(dSBoard, CONF_FRIENDLY_NAME):
+        entity_id=str(getattr(dSBoard, CONF_FRIENDLY_NAME))+'_'+dSEntityType+str(identifier)
+    elif hasattr(dSBoard, CONF_NAME):
+        entity_id=str(getattr(dSBoard, CONF_NAME))+'_'+dSEntityType+str(identifier)
+    else:
+        entity_id=create_entity_unique_id(dSBoard, identifier, dSEntityType)
+    entity_id=entity_id.replace(':','')
+    entity_id=entity_id.replace('-','_')
+    entity_id=entity_id.replace(' ','_')
+    entity_id=entity_id.lower()
+    return entity_id
 
 class dScriptPlatformEntity(Entity):
     """Base class for Govee Life integration."""
@@ -52,12 +68,13 @@ class dScriptPlatformEntity(Entity):
             self._identifier = identifier
             self._board = dSBoard
             self._dSEntityType = dSEntityType
-            self._entity_id = str(self._board.get(CONF_FRIENDLY_NAME, self._board.name)).replace('-','_')+'_'+self._dSEntityType+str(self._identifier)
+            self._entity_id = create_entity_id(self._board, self._identifier, self._dSEntityType)
 
             #_LOGGER.debug("%s - %s.%s: __init__ kwargs = %s", entry.entry_id, self._board.name, self.uniqueid, kwargs)
             self._init_platform_specific(**kwargs)
             self.entity_id = generate_entity_id(self._platform+'.{}', self._entity_id, hass=hass)
-            self.uniqueid = DOMAIN.lower()+"_"+str(self._board.MACAddress).replace(':','')+'_'+self._dSEntityType+str(self._identifier)
+            #self.uniqueid = DOMAIN.lower()+"_"+str(self._board.MACAddress).replace(':','')+'_'+self._dSEntityType+str(self._identifier)
+            self.uniqueid = create_entity_unique_id(self._board, self._identifier, self._dSEntityType)
             _LOGGER.debug("%s - %s.%s: __init__ complete - entity_id: %s", entry.entry_id, self._board.name, self.uniqueid, self.entity_id)
         except Exception as e:            
             _LOGGER.error("%s - %s.%s: __init__ failed: %s (%s.%s)", entry.entry_id, self._board.name, str(identifier), str(e), e.__class__.__module__, type(e).__name__)
