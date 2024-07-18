@@ -104,11 +104,12 @@ async def async_dScript_GetBoardByIP(hass: HomeAssistant, entry: ConfigEntry, ip
             _LOGGER.error("%s - async_dScript_GetBoardByIP: Failed to search for %s: %s (%s.%s)", entry.entry_id, ip, str(e), e.__class__.__module__, type(e).__name__)
 
 
-async def async_dScript_GetEntityByUniqueID(hass: HomeAssistant, entry: ConfigEntry, uniqueid: str, dSBoardMac: Optional[str] = None): 
+#async def async_dScript_GetEntityByUniqueID(hass: HomeAssistant, entry: ConfigEntry, uniqueid: str, dSBoardMac: Optional[str] = None): 
+async def async_dScript_GetEntityByUniqueID(hass: HomeAssistant, config_entry_id: str, uniqueid: str, dSBoardMac: Optional[str] = None): 
     """Async: Receive dScript entity object from uniqueid"""    
     try:
-        _LOGGER.debug("%s - %s: async_dScript_GetEntityByUniqueID: searching for: %s", entry.entry_id, DOMAIN, uniqueid)
-        entry_data=hass.data[DOMAIN][entry.entry_id]
+        _LOGGER.debug("%s - %s: async_dScript_GetEntityByUniqueID: searching for: %s", config_entry_id, DOMAIN, uniqueid)
+        entry_data=hass.data[DOMAIN][config_entry_id]
         entity = None
         if not dSBoardMac is None:
             board_entry = entry_data[CONF_DEVICES].get(dSBoardMac, None)
@@ -122,14 +123,12 @@ async def async_dScript_GetEntityByUniqueID(hass: HomeAssistant, entry: ConfigEn
                     return entity
         return entity
     except Exception as e:
-        _LOGGER.error("%s - %s: async_dScript_GetEntityByUniqueID: searching failed: %s (%s.%s)", entry.entry_id, DOMAIN, str(e), e.__class__.__module__, type(e).__name__)
+        _LOGGER.error("%s - %s: async_dScript_GetEntityByUniqueID: search failed: %s (%s.%s)", config_entry_id, DOMAIN, str(e), e.__class__.__module__, type(e).__name__)
         return None
 
 
 async def async_dScript_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: Optional[AddEntitiesCallback] = None, dSEntityTypes: list=[], dSBoardList: list=[]) -> None:
     """Async: Register entities for a specific platform or a specific dSBoard""" 
-    
-
     try:
         _LOGGER.debug("%s - %s: async_dScript_setup_entry: preparing work data", entry.entry_id, DOMAIN)
         platform=None
@@ -171,18 +170,20 @@ async def async_dScript_setup_entry(hass: HomeAssistant, entry: ConfigEntry, asy
             if not async_add_entities is None:
                 entry_data.setdefault(CONF_ADD_ENTITIES, {})
                 entry_data[CONF_ADD_ENTITIES].setdefault(platform, async_add_entities)
-            platform_async_add_entities = entry_data[CONF_ADD_ENTITIES].get(platform, None)
-            
+                platform_async_add_entities = async_add_entities
+            elif async_add_entities is None:
+                platform_async_add_entities = entry_data[CONF_ADD_ENTITIES].get(platform, None)
+
             if platform_async_add_entities is None:
                 _LOGGER.warning("%s - %s: async_dScript_setup_entry: No AddEntitiesCallback for platform: %s", entry.entry_id, DOMAIN, platform)
                 continue        
-            
+
             for dSBoard in dSBoardList:
                 try:
                     _LOGGER.debug("%s - %s: async_dScript_setup_entry: %s setting up %s platform", entry.entry_id, DOMAIN, dSBoard.name, platform)
                     await asyncio.sleep(0)
                     identifier = 0
-                    
+
                     if platform == 'switch' and not dSBoard._CustomFirmeware: pattr = DSCRIPT_ENTITYTYPETOCOUNTATTR['switch_native']
                     else: pattr=DSCRIPT_ENTITYTYPETOCOUNTATTR[platform]
                     if not hasattr(dSBoard, pattr):
@@ -194,7 +195,7 @@ async def async_dScript_setup_entry(hass: HomeAssistant, entry: ConfigEntry, asy
                         _LOGGER.debug("%s - %s: async_dScript_setup_entry: %s setting up entity %s.%s", entry.entry_id, DOMAIN, dSBoard.name, platform, identifier)
                         
                         entity = DSCRIPT_ENTITYTYPETOOBJECT[platform](hass, entry, dSBoard, identifier, platform)
-                        if not await async_dScript_GetEntityByUniqueID(hass, entry, entity.uniqueid, dSBoard.MACAddress) is None:
+                        if not await async_dScript_GetEntityByUniqueID(hass, entry.entry_id, entity.uniqueid, dSBoard.MACAddress) is None:
                             #_LOGGER.warning("%s - %s: async_dScript_setup_entry: %s entity %s already exists", entry.entry_id, DOMAIN, dSBoard.name, entity.uniqueid)
                             _LOGGER.debug("%s - %s: async_dScript_setup_entry: %s entity %s already exists", entry.entry_id, DOMAIN, dSBoard.name, entity.uniqueid)
                             continue

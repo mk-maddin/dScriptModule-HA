@@ -17,6 +17,7 @@ from homeassistant.const import (
 )
 
 from .const import (
+    CONF_ADD_ENTITIES,
     CONF_PYOJBECT,
     CONF_SERVER,
     DSCRIPT_TOPICTOENTITYTYPE,
@@ -30,6 +31,7 @@ from .server import dScriptBuiltInServer
 from .board import async_dScript_SetupKnownBoards
 from .services import (
     async_registerService,
+    async_service_UpdateButton,
 )
 
 _LOGGER: Final = logging.getLogger(__name__)
@@ -96,8 +98,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return False
 
     try:
-        _LOGGER.debug("%s - async_setup_entry: register services", entry.entry_id)
-        #await async_registerService(hass, "set_poll_interval", async_service_SetPollInterval)
+        _LOGGER.debug("%s - async_setup_entry: register services", entry.entry_id)        
+        await async_registerService(hass, "updatebutton", async_service_UpdateButton)
     except Exception as e:
         _LOGGER.error("%s - async_setup_entry: register services failed: %s (%s.%s)", entry.entry_id, str(e), e.__class__.__module__, type(e).__name__)
         return False 
@@ -121,7 +123,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         for platform in DSCRIPT_TOPICTOENTITYTYPE.values():
             _LOGGER.debug("%s - async_unload_entry: unload platform: %s", entry.entry_id, platform)
             platform_ok = await asyncio.gather(*[hass.config_entries.async_forward_entry_unload(entry, platform)])
-
             if not platform_ok:
                 _LOGGER.error("%s - async_unload_entry: failed to unload: %s (%s)", entry.entry_id, platform, platform_ok)
                 all_ok = platform_ok
@@ -133,7 +134,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _LOGGER.error("%s - async_setup_entry: failed to unload server: %s", DOMAIN, BuiltInServer)
                 all_ok = False
             else:
-                hass.data[DOMAIN][CONF_SERVER] = None
+                hass.data[DOMAIN].pop(CONF_SERVER)
+                #entry_data[CONF_SERVER] = None
+
+        if not entry_data.get(CONF_ADD_ENTITIES, None) is None:
+            hass.data[DOMAIN].pop(CONF_ADD_ENTITIES)
+            #entry_data[CONF_ADD_ENTITIES] = None
 
         if all_ok:
             _LOGGER.debug("%s - async_unload_entry: Unload option updates listener: %s.%s ", entry.entry_id, FUNC_OPTION_UPDATES)

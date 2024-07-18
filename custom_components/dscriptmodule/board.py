@@ -100,7 +100,7 @@ async def async_dScript_ValidateBoardConfig(hass: HomeAssistant, entry: ConfigEn
                 elif counts_pre[platform] > count_post:
                     for identifier in list(range(int(count_post)+1,int(counts_pre[platform])+1)):
                         uniqueid = create_entity_unique_id(dSBoard, identifier, platform)
-                        entity_object = async_dScript_GetEntityByUniqueID(hass, entry, uniqueid, dSBoard.MACAddress)
+                        entity_object = async_dScript_GetEntityByUniqueID(hass, entry.entry_id, uniqueid, dSBoard.MACAddress)
                         if entity_object is None:
                             _LOGGER.warning("%s - %s: async_dScript_ValidateBoardConfig: unable to find remove entity: %s", entry.entry_id, dSBoard.name, uniqueid)
                             continue

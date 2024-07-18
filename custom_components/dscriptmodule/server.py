@@ -174,7 +174,7 @@ class dScriptBuiltInServer(object):
                     _LOGGER.warning("%s - async_dSBoardEntityUpdate: received trigger from not identifyable board: %s", sender.sender, event)
                     return None
                 uniqueid = DOMAIN.lower()+"_"+str(dSBoard.MACAddress).replace(':','')+'_'+dSEntityType+str(sender.identifier)                
-                entity = await async_dScript_GetEntityByUniqueID(self.hass, self._entry, uniqueid, str(dSBoard.MACAddress))
+                entity = await async_dScript_GetEntityByUniqueID(self.hass, self._entry_id, uniqueid, str(dSBoard.MACAddress))
                 if not entity is None:
                     _LOGGER.debug("%s - async_dSBoardEntityUpdate: update push %s to state %s", sender.sender, entity .entity_id, sender.value)
                     self.hass.async_create_task(entity.async_local_push(sender.value))
