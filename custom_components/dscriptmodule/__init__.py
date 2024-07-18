@@ -134,12 +134,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _LOGGER.error("%s - async_setup_entry: failed to unload server: %s", DOMAIN, BuiltInServer)
                 all_ok = False
             else:
-                hass.data[DOMAIN].pop(CONF_SERVER)
-                #entry_data[CONF_SERVER] = None
+                hass.data[DOMAIN][entry.entry_id].pop(CONF_SERVER)
 
-        if not entry_data.get(CONF_ADD_ENTITIES, None) is None:
-            hass.data[DOMAIN].pop(CONF_ADD_ENTITIES)
-            #entry_data[CONF_ADD_ENTITIES] = None
+        if CONF_ADD_ENTITIES in entry_data and not entry_data.get(CONF_ADD_ENTITIES, None) is None:
+            hass.data[DOMAIN][entry.entry_id].pop(CONF_ADD_ENTITIES)
 
         if all_ok:
             _LOGGER.debug("%s - async_unload_entry: Unload option updates listener: %s.%s ", entry.entry_id, FUNC_OPTION_UPDATES)

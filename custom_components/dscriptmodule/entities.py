@@ -162,7 +162,7 @@ class dScriptPlatformEntity(Entity):
             name=self._board.friendlyname,
             sw_version=str(self._board._ApplicationFirmwareMajor) + "." + str(self._board._ApplicationFirmwareMinor),
             configuration_url="http://" + self._board.IP + "/index.htm",
-            suggested_area=str(self._board.name).split('_')[-1]
+            suggested_area=str(str(self._board.name).replace('-','_')).split('_')[-1]
         )
         #_LOGGER.debug("%s - %s.%s: device_info: %s", self._entry_id, self._board.name, self.uniqueid, info) 
         return info

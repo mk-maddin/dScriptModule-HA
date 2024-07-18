@@ -104,7 +104,6 @@ async def async_dScript_GetBoardByIP(hass: HomeAssistant, entry: ConfigEntry, ip
             _LOGGER.error("%s - async_dScript_GetBoardByIP: Failed to search for %s: %s (%s.%s)", entry.entry_id, ip, str(e), e.__class__.__module__, type(e).__name__)
 
 
-#async def async_dScript_GetEntityByUniqueID(hass: HomeAssistant, entry: ConfigEntry, uniqueid: str, dSBoardMac: Optional[str] = None): 
 async def async_dScript_GetEntityByUniqueID(hass: HomeAssistant, config_entry_id: str, uniqueid: str, dSBoardMac: Optional[str] = None): 
     """Async: Receive dScript entity object from uniqueid"""    
     try:
@@ -171,7 +170,7 @@ async def async_dScript_setup_entry(hass: HomeAssistant, entry: ConfigEntry, asy
                 entry_data.setdefault(CONF_ADD_ENTITIES, {})
                 entry_data[CONF_ADD_ENTITIES].setdefault(platform, async_add_entities)
                 platform_async_add_entities = async_add_entities
-            elif async_add_entities is None:
+            elif async_add_entities is None and CONF_ADD_ENTITIES in entry_data:
                 platform_async_add_entities = entry_data[CONF_ADD_ENTITIES].get(platform, None)
 
             if platform_async_add_entities is None:
