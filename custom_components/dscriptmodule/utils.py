@@ -136,7 +136,11 @@ async def async_dScript_setup_entry(hass: HomeAssistant, entry: ConfigEntry, asy
         if dSEntityTypes == []: dSEntityTypes = DSCRIPT_TOPICTOENTITYTYPE.values()
         if dSBoardList == []:
             for board_entry in entry_data[CONF_DEVICES]:
-                dSBoard = board_entry.get(CONF_PYOJBECT, None)
+                dSBoard = None
+                if type(board_entry) is str:
+                    _LOGGER.debug("%s - %s: async_dScript_setup_entry: board entry is string (no get): %s", entry.entry_id, DOMAIN, board_entry)
+                else:
+                    dSBoard = board_entry.get(CONF_PYOJBECT, None)
                 if not dSBoard is None: dSBoardList.add(dSBoard)
     except Exception as e:
         _LOGGER.error("%s - %s: async_dScript_setup_entry: getting entry data failed: %s (%s.%s)", entry.entry_id, DOMAIN, str(e), e.__class__.__module__, type(e).__name__)
@@ -174,7 +178,7 @@ async def async_dScript_setup_entry(hass: HomeAssistant, entry: ConfigEntry, asy
                 platform_async_add_entities = entry_data[CONF_ADD_ENTITIES].get(platform, None)
 
             if platform_async_add_entities is None:
-                _LOGGER.warning("%s - %s: async_dScript_setup_entry: No AddEntitiesCallback for platform: %s", entry.entry_id, DOMAIN, platform)
+                _LOGGER.debug("%s - %s: async_dScript_setup_entry: No AddEntitiesCallback for platform: %s", entry.entry_id, DOMAIN, platform)
                 continue        
 
             for dSBoard in dSBoardList:
