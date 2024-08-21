@@ -23,3 +23,11 @@ updatebutton:
           integration: sensor
           domain: dscriptmodule 
 
+heartbeatknownboards:
+  name: Hearbeat KnownBoards
+  dscription: Trigger heartbeat to each known/cached dScriptBoard
+  fields:
+    entry_id:
+      name: Config entry ID
+      description: The configuration entry ID of the entry to be reloaded.
+      example: 01J32WQFKHB8ZD3E4127Q76A4D

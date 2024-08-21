@@ -32,6 +32,7 @@ from .board import async_dScript_SetupKnownBoards
 from .services import (
     async_registerService,
     async_service_UpdateButton,
+    async_service_HeartbeatKnownBoards,
 )
 
 _LOGGER: Final = logging.getLogger(__name__)
@@ -100,6 +101,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     try:
         _LOGGER.debug("%s - async_setup_entry: register services", entry.entry_id)        
         await async_registerService(hass, "updatebutton", async_service_UpdateButton)
+        await async_registerService(hass, "heartbeatknownboards", async_service_HeartbeatKnownBoards)
     except Exception as e:
         _LOGGER.error("%s - async_setup_entry: register services failed: %s (%s.%s)", entry.entry_id, str(e), e.__class__.__module__, type(e).__name__)
         return False 

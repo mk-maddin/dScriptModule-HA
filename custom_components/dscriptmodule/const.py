@@ -13,6 +13,7 @@ CONF_LISTENIP: Final = 'listen_ip'
 CONF_SERVER: Final = 'server'
 CONF_PYOJBECT: Final = 'pyobj'
 CONF_ADD_ENTITIES: Final = 'addentitiescallback'
+CONF_ENTRY_ID: Final = 'entry_id'
 
 KNOWN_DATA: Final = 'cache'
 KNOWN_DATA_FILE: Final = '/config/.'+DOMAIN+'_'+KNOWN_DATA+'.json'
@@ -30,6 +31,7 @@ CATTR_PROTOCOL: Final =  "protocol"
 CATTR_SW_TYPE: Final =  "custom_app"
 
 STATE_STOPPED: Final = "stopped"
+
 
 DSCRIPT_TOPICTOENTITYTYPE: Final = {
     "getlight": "light",
