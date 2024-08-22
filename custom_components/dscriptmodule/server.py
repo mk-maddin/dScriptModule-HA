@@ -123,7 +123,8 @@ class dScriptBuiltInServer(object):
                 self.hass.async_create_task(async_setup_dScriptBoard(self.hass, self._entry, sender.sender))
             else:
                 _LOGGER.debug("%s - async_dSBoardHearbeat: known board %s", sender.sender, dSBoard.friendlyname)
-                dSBoard.available = True
+                if not dSBoard.check_available() == True:
+                    _LOGGER.warning("%s - async_dSBoardHearbeat: board unavailable %s", sender.sender, dSBoard.friendlyname)
                 if dSBoard._CustomFirmeware:
                     self.hass.async_create_task(self.async_dSBoardGetConfig(sender, event))
         except Exception as e:

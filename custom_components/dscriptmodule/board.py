@@ -95,6 +95,7 @@ async def async_dScript_ValidateBoardConfig(hass: HomeAssistant, entry: ConfigEn
                 if platform == 'switch' and not dSBoard._CustomFirmeware: pattr = DSCRIPT_ENTITYTYPETOCOUNTATTR['switch_native']
                 else: pattr=DSCRIPT_ENTITYTYPETOCOUNTATTR[platform]
                 count_post = getattr(dSBoard, pattr, 0)
+                _LOGGER.debug("%s - %s: async_dScript_ValidateBoardConfig: %s entities count: %s -> %s", entry.entry_id, dSBoard.name, platform, counts_pre[platform], count_post)
                 if counts_pre[platform] == count_post: continue
                 elif counts_pre[platform] < count_post: platforms_add_entities.append(platform)
                 elif counts_pre[platform] > count_post:
@@ -157,25 +158,37 @@ class dScriptBoardHA(dScriptBoard):
             _LOGGER.error("%s - %s: dScriptBoardHA __init__: prepare failed: %s (%s.%s)", entry_id, tcp_ip, str(e), e.__class__.__module__, type(e).__name__)
             return None
 
-        try:
-            _LOGGER.debug("%s - %s: dScriptBoardHA __init__: connect", entry_id, tcp_ip)
-            self.InitBoard()            
-        except Exception as e:
-            _LOGGER.error("%s - %s: dScriptBoardHA __init__: connect failed: %s (%s.%s)", entry_id, tcp_ip, str(e), e.__class__.__module__, type(e).__name__)
+        if not self.check_available() == True:
             return None
+        _LOGGER.debug("%s - %s: dScriptBoardHA __init__: complete", entry_id, tcp_ip)
+
+
+    def check_available(self):
+        try:
+            _LOGGER.debug("%s - %s: dScriptBoardHA check_available: connect", self._HostName, self.IP)
+            self.InitBoard()
+            if self._SystemFirmwareMajor == 0: #no firmware data means not connected
+                _LOGGER.error("%s - %s: dScriptBoardHA check_available: not connected", self._HostName, self.IP)
+                self.available = False
+                return False 
+        except Exception as e:
+            _LOGGER.error("%s - %s: dScriptBoardHA check_available: connect failed: %s (%s.%s)", self._HostName, self.IP, str(e), e.__class__.__module__, type(e).__name__)
+            self.available = False
+            return False
 
         try:
-            _LOGGER.debug("%s - %s: dScriptBoardHA __init__: post-process", entry_id, tcp_ip)
-            self.available = True
+            _LOGGER.debug("%s - %s: dScriptBoardHA check_available: post-process", self._HostName, self.IP)
             self.MACAddress = str(self._MACAddress)
             self._cleanup_macaddress()
         except Exception as e:
-            _LOGGER.error("%s - %s: dScriptBoardHA __init__: post-process failed: %s (%s.%s)", entry_id, tcp_ip, str(e), e.__class__.__module__, type(e).__name__)
-            return None
+            _LOGGER.error("%s - %s: dScriptBoardHA check_available: post-process failed: %s (%s.%s)", self._HostName, self.IP, str(e), e.__class__.__module__, type(e).__name__)
+            self.available = False
+            return False
 
-        _LOGGER.debug("%s - %s: dScriptBoardHA __init__ complete: FW: %s.%s | App: %s.%s | Custom: %s | MAC: %s | IP: %s | Prot: %s", 
+        _LOGGER.debug("%s - %s: dScriptBoardHA check_available complete: FW: %s.%s | App: %s.%s | Custom: %s | MAC: %s | IP: %s | Prot: %s", 
             self._HostName, self._SystemFirmwareMajor, self._SystemFirmwareMinor, 
             self._ApplicationFirmwareMajor, self._ApplicationFirmwareMinor, self._CustomFirmeware, self.MACAddress, self.IP, self._Protocol)
+        self.available = True
 
 
     def _cleanup_macaddress(self):

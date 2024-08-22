@@ -113,13 +113,15 @@ async def async_dScript_GetEntityByUniqueID(hass: HomeAssistant, config_entry_id
         if not dSBoardMac is None:
             board_entry = entry_data[CONF_DEVICES].get(dSBoardMac, None)
             if not board_entry is None:
-                entity = board_entry.get(uniqueid, None)        
+                entity = board_entry.get(uniqueid, None)
         if entity is None:
             for board_mac in entry_data[CONF_DEVICES]:
                 board_entry = entry_data[CONF_DEVICES].get(board_mac)
                 entity = board_entry.get(uniqueid, None)
                 if not entity is None:
                     return entity
+        if entity is None:
+            _LOGGER.debug("%s - %s: async_dScript_GetEntityByUniqueID: cannot find entity: %s", config_entry_id, DOMAIN, uniqueid)
         return entity
     except Exception as e:
         _LOGGER.error("%s - %s: async_dScript_GetEntityByUniqueID: search failed: %s (%s.%s)", config_entry_id, DOMAIN, str(e), e.__class__.__module__, type(e).__name__)

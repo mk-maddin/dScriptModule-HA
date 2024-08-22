@@ -85,6 +85,14 @@ class dScriptBoardSensor(dScriptPlatformEntity):
         }
 
     @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        #_LOGGER.debug("%s - %s.%s: available", self._entry_id, self._board.name, self.uniqueid)
+        if self._onlineurl is STATE_UNKNOWN:
+            return False
+        return True
+
+    @property
     def should_poll(self) -> bool:
         """Return True if polling is needed."""
         #_LOGGER.debug("%s - %s.%s: should_poll", self._entry_id, self._board.name, self.uniqueid)
@@ -109,8 +117,10 @@ class dScriptBoardSensor(dScriptPlatformEntity):
             _LOGGER.error("%s - %s.%s: async_local_poll failed: %s (%s.%s)", self._entry_id, self._board.name, self.uniqueid, str(e), e.__class__.__module__, type(e).__name__)
             return None
         try:
-            if not state == 200:    self._board.available = False
-            else:                   self._board.available = True
+            if not state == 200 and self._board.available == True: self._board.check_available()
+            elif state == 200 and self._board.available == False: self._board.check_available()
+            else:
+                _LOGGER.debug("%s - %s: async_local_poll board available unchanged: %s", self._board.friendlyname, self._name, self._board.available)
             self._state = str(state)
             self.async_write_ha_state()
             _LOGGER.debug("%s - %s: async_local_poll complete: %s", self._board.friendlyname, self._name, state)
