@@ -8,6 +8,7 @@ import asyncio
 
 from homeassistant.const import (
     CONF_DEVICES,
+    CONF_ENABLED,
     CONF_FRIENDLY_NAME,
     CONF_IP_ADDRESS,
 )
@@ -131,6 +132,7 @@ async def async_dScript_SetupKnownBoards(hass: HomeAssistant, entry: ConfigEntry
         for board_entry in list(entry_data.get(KNOWN_DATA, [])):
             _LOGGER.debug("%s - %s: async_dScript_SetupKnownBoards: processing board entry: %s ", entry.entry_id, DOMAIN, board_entry)
             board_entry = entry_data[KNOWN_DATA][board_entry]
+            if not board_entry.get(CONF_ENABLED, True): continue
             ip_address = board_entry.get(CONF_IP_ADDRESS, None)
             if ip_address is None: continue
             
