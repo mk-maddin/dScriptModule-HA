@@ -9,7 +9,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.components.light import LightEntity
+from homeassistant.components.light import (
+    ColorMode,
+    LightEntity,
+)
 from homeassistant.const import (
     STATE_ON,
     STATE_OFF,
@@ -38,6 +41,8 @@ class dScriptLight(LightEntity, dScriptPlatformEntity):
     """The class for dScriptModule lightes."""
 
     _platform = PLATFORM
+    _attr_color_mode = ColorMode.ONOFF
+    _attr_supported_color_modes = {ColorMode.ONOFF}
 
 #    def _init_platform_specific(self, **kwargs):
 #        """Platform specific init actions"""
