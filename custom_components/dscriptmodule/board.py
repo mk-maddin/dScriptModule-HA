@@ -30,6 +30,7 @@ from .entities import (
     create_entity_unique_id
 )
 from .utils import (
+    async_dScript_GetEntityByUniqueID,
     async_dScript_setup_entry,
     ProgrammingDebug,
     async_ProgrammingDebug,
@@ -42,7 +43,8 @@ async def async_setup_dScriptBoard(hass: HomeAssistant, entry: ConfigEntry, tcp_
     """Set up a new dScriptBoard."""
     try:
         _LOGGER.debug("%s - %s: async_setup_dScriptBoard: setup board", entry.entry_id, tcp_ip)
-        dSBoard = dScriptBoardHA(entry.entry_id, tcp_ip, tcp_port, protocol, aeskey)
+        # board init does blocking network I/O (DNS + GetStatus + GetConfig) - never run it inside the event loop
+        dSBoard = await hass.async_add_executor_job(dScriptBoardHA, entry.entry_id, tcp_ip, tcp_port, protocol, aeskey)
         entry_data=hass.data[DOMAIN][entry.entry_id]
         if not entry_data[KNOWN_DATA].get(dSBoard.MACAddress, None) is None and not entry_data[KNOWN_DATA][dSBoard.MACAddress].get(CONF_PYOJBECT, None) is None:
             _LOGGER.warning("%s - %s: async_setup_dScriptBoard: board already exists: %s", entry.entry_id, tcp_ip, dSBoard.name)
@@ -102,7 +104,7 @@ async def async_dScript_ValidateBoardConfig(hass: HomeAssistant, entry: ConfigEn
                 elif counts_pre[platform] > count_post:
                     for identifier in list(range(int(count_post)+1,int(counts_pre[platform])+1)):
                         uniqueid = create_entity_unique_id(dSBoard, identifier, platform)
-                        entity_object = async_dScript_GetEntityByUniqueID(hass, entry.entry_id, uniqueid, dSBoard.MACAddress)
+                        entity_object = await async_dScript_GetEntityByUniqueID(hass, entry.entry_id, uniqueid, dSBoard.MACAddress)
                         if entity_object is None:
                             _LOGGER.warning("%s - %s: async_dScript_ValidateBoardConfig: unable to find remove entity: %s", entry.entry_id, dSBoard.name, uniqueid)
                             continue
@@ -166,8 +168,10 @@ class dScriptBoardHA(dScriptBoard):
 
 
     def check_available(self):
+        """Blocking availability check - only call from an executor thread"""
         try:
             _LOGGER.debug("%s - %s: dScriptBoardHA check_available: connect", self._HostName, self.IP)
+            self._SystemFirmwareMajor = 0 #reset to detect a board which is no longer reachable
             self.InitBoard()
             if self._SystemFirmwareMajor == 0: #no firmware data means not connected
                 _LOGGER.error("%s - %s: dScriptBoardHA check_available: not connected", self._HostName, self.IP)
@@ -177,7 +181,31 @@ class dScriptBoardHA(dScriptBoard):
             _LOGGER.error("%s - %s: dScriptBoardHA check_available: connect failed: %s (%s.%s)", self._HostName, self.IP, str(e), e.__class__.__module__, type(e).__name__)
             self.available = False
             return False
+        return self._check_available_post_process()
 
+
+    async def async_check_available(self, full=True):
+        """Async availability check - full=False only checks GetStatus (lightweight, used for heartbeats)"""
+        try:
+            _LOGGER.debug("%s - %s: dScriptBoardHA async_check_available: connect (full: %s)", self._HostName, self.IP, full)
+            self._SystemFirmwareMajor = 0 #reset to detect a board which is no longer reachable
+            if full:
+                await self.async_InitBoard()
+            else:
+                await self.async_GetStatus()
+            if self._SystemFirmwareMajor == 0: #no firmware data means not connected
+                _LOGGER.error("%s - %s: dScriptBoardHA async_check_available: not connected", self._HostName, self.IP)
+                self.available = False
+                return False 
+        except Exception as e:
+            _LOGGER.error("%s - %s: dScriptBoardHA async_check_available: connect failed: %s (%s.%s)", self._HostName, self.IP, str(e), e.__class__.__module__, type(e).__name__)
+            self.available = False
+            return False
+        return self._check_available_post_process()
+
+
+    def _check_available_post_process(self):
+        """Post-process board data after a successful connection"""
         try:
             _LOGGER.debug("%s - %s: dScriptBoardHA check_available: post-process", self._HostName, self.IP)
             self.MACAddress = str(self._MACAddress)
@@ -191,6 +219,7 @@ class dScriptBoardHA(dScriptBoard):
             self._HostName, self._SystemFirmwareMajor, self._SystemFirmwareMinor, 
             self._ApplicationFirmwareMajor, self._ApplicationFirmwareMinor, self._CustomFirmeware, self.MACAddress, self.IP, self._Protocol)
         self.available = True
+        return True
 
 
     def _cleanup_macaddress(self):

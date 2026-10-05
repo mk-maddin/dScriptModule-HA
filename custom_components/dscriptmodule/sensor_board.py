@@ -4,13 +4,13 @@ from __future__ import annotations
 from typing import Final
 import logging
 import asyncio
-import urllib.request
-import socket
+import aiohttp
 
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.const import (
     ATTR_MODEL,
     ATTR_VOLTAGE,
@@ -102,23 +102,26 @@ class dScriptBoardSensor(dScriptPlatformEntity):
         """Async: Poll the latest status from device"""
         try:
             _LOGGER.debug("%s - %s.%s: async_local_poll", self._entry_id, self._board.name, self.uniqueid)         
-            state = await self.hass.async_add_executor_job(urllib.request.urlopen,self._onlineurl)
-            state = state.getcode()
+            session = async_get_clientsession(self.hass)
+            async with session.get(self._onlineurl, timeout=aiohttp.ClientTimeout(total=10)) as response: # always closes the connection to the board
+                state = response.status
+                await response.read()
             if self._NoGetUpdateCounter >= 10:
                 self._NoGetUpdateCounter = 0
                 await self._board.async_GetStatus()
                 #await self.hass.async_add_executor_job(self._board.GetStatus)
             else: self._NoGetUpdateCounter += 1
-        except urllib.error.URLError:       state = 404
-        except socket.timeout:              state = 408
-        except OSError:                     state = 113
-        except urllib.error.HTTPError as e: state = e.code
+        except asyncio.TimeoutError:                state = 408
+        except aiohttp.ClientResponseError as e:    state = e.status
+        except aiohttp.ClientConnectionError:       state = 113
+        except aiohttp.ClientError:                 state = 404
+        except OSError:                             state = 113
         except Exception as e:
             _LOGGER.error("%s - %s.%s: async_local_poll failed: %s (%s.%s)", self._entry_id, self._board.name, self.uniqueid, str(e), e.__class__.__module__, type(e).__name__)
             return None
         try:
-            if not state == 200 and self._board.available == True: self._board.check_available()
-            elif state == 200 and self._board.available == False: self._board.check_available()
+            if not state == 200 and self._board.available == True: await self._board.async_check_available()
+            elif state == 200 and self._board.available == False: await self._board.async_check_available()
             else:
                 _LOGGER.debug("%s - %s: async_local_poll board available unchanged: %s", self._board.friendlyname, self._name, self._board.available)
             self._state = str(state)
