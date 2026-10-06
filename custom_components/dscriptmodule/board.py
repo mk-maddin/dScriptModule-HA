@@ -216,7 +216,7 @@ class dScriptBoardHA(dScriptBoard):
             return False
 
         _LOGGER.debug("%s - %s: dScriptBoardHA check_available complete: FW: %s.%s | App: %s.%s | Custom: %s | MAC: %s | IP: %s | Prot: %s", 
-            self._HostName, self._SystemFirmwareMajor, self._SystemFirmwareMinor, 
+            self._HostName, self.IP, self._SystemFirmwareMajor, self._SystemFirmwareMinor, 
             self._ApplicationFirmwareMajor, self._ApplicationFirmwareMinor, self._CustomFirmeware, self.MACAddress, self.IP, self._Protocol)
         self.available = True
         return True
