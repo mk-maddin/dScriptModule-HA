@@ -79,7 +79,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
         _LOGGER.debug("%s - OptionsFlowHandler: __init__: %s", DOMAIN, config_entry)
-        self.config_entry = config_entry      
+        if not isinstance(getattr(type(self), "config_entry", None), property):
+            self.config_entry = config_entry # only needed for HA < 2024.11 - newer versions provide config_entry themselves (setting it raises since 2025.12)
                  
     async def async_step_init(self, user_input: Dict[str, Any] = None) -> Dict[str, Any]:
         """Manage the options for the custom component."""
