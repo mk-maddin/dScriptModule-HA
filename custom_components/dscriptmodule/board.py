@@ -240,6 +240,10 @@ class dScriptBoardHA(dScriptBoard):
         except (KeyError, ValueError) as e:
             _LOGGER.debug("%s - %s: dScriptBoardHA update_from_status_page: unexpected content: %s (%s.%s)", self._HostName, self.IP, str(e), e.__class__.__module__, type(e).__name__)
             return False
+        app_major, sep, app_minor = values.get('app', '').partition('.')
+        if sep and app_major.isdigit() and app_minor.isdigit(): # keep the version current like the former GetStatus every 10th poll did
+            self._ApplicationFirmwareMajor = int(app_major)
+            self._ApplicationFirmwareMinor = int(app_minor)
         self._Temperature = temperature / 10.0
         self._Volts = voltage / 10.0
         self._InstrPerSec = instr

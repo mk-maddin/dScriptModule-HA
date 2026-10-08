@@ -14,8 +14,6 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.const import (
     ATTR_MODEL,
-    ATTR_VOLTAGE,
-    ATTR_TEMPERATURE,
     ATTR_DEVICE_ID,
     ATTR_SW_VERSION,
     CONF_UNIQUE_ID,    
@@ -53,8 +51,6 @@ class dScriptBoardSensor(dScriptPlatformEntity):
     
     _icon = 'mdi:developer-board'
     _platform = PLATFORM
-    _firmware = STATE_UNKNOWN
-    _software = STATE_UNKNOWN
     _onlineurl = STATE_UNKNOWN
     _configurl = STATE_UNKNOWN   
     _NoGetUpdateCounter = 999
@@ -65,8 +61,6 @@ class dScriptBoardSensor(dScriptPlatformEntity):
     def _init_platform_specific(self, **kwargs):
         """Platform specific init actions"""
         _LOGGER.debug("%s - %s %s%s: _init_platform_specific", self._entry_id, self._board.name, self._dSEntityType, self._identifier)
-        self._firmware = str(self._board._SystemFirmwareMajor) + "." + str(self._board._SystemFirmwareMinor)
-        self._software = str(self._board._ApplicationFirmwareMajor) + "." + str(self._board._ApplicationFirmwareMinor)
         self._onlineurl= "http://" + self._board.IP + "/index.htm"
         self._statusurl= "http://" + self._board.IP + "/status.htm"
         self._configurl= "http://" + self._board.IP + "/_config.htm"
@@ -80,11 +74,9 @@ class dScriptBoardSensor(dScriptPlatformEntity):
         """Return the state attributes of the sensor."""
         return {
             ATTR_MODEL: self._board._ModuleID,
-            ATTR_VOLTAGE: self._board._Volts,
-            ATTR_TEMPERATURE: self._board._Temperature,
             ATTR_DEVICE_ID: self._board.MACAddress,
-            ATTR_SW_VERSION: self._software,
-            CATTR_FW_VERSION: self._firmware,
+            ATTR_SW_VERSION: str(self._board._ApplicationFirmwareMajor) + "." + str(self._board._ApplicationFirmwareMinor), # read live - changes after a firmware update
+            CATTR_FW_VERSION: str(self._board._SystemFirmwareMajor) + "." + str(self._board._SystemFirmwareMinor),
             CATTR_IP_ADDRESS: self._board.IP,
             CATTR_SW_TYPE: self._board._CustomFirmeware,
             CATTR_PROTOCOL: self._board._Protocol

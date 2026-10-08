@@ -150,6 +150,9 @@ async def test_status_page_feeds_diagnostic_sensors(hass: HomeAssistant, fake_bo
     assert hass.states.get(load).attributes["last_second"] == 1200
     assert board_entity(hass, entry, "sensor_board")._board._StatusPageSupported is True
     assert len(fake_board.requests) == requests_before, "status.htm replaces the extra GetStatus connection"
+    board_state = hass.states.get(board_entity(hass, entry, "sensor_board").entity_id)
+    assert "temperature" not in board_state.attributes and "voltage" not in board_state.attributes  # separate entities now
+    assert board_state.attributes["sw_version"] == "3.9"  # app version taken over from status.htm (GetStatus reported 3.8)
 
     voltage = registry.async_get_entity_id("sensor", DOMAIN, "dscriptmodule_" + MAC.replace(":", "") + "_sensor_voltage1")
     voltage_entry = registry.async_get(voltage)
