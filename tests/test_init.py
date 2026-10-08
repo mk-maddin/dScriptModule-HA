@@ -116,3 +116,71 @@ async def test_requests_to_board_are_never_parallel(hass: HomeAssistant, fake_bo
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
+
+
+MAC = "00:01:02:ab:04:05"
+STATUS_PAGE = "app=3.9\ntemperature=267\nvoltage=121\ninstr_per_sec=1200\ninstr_per_sec_max=1500\n"
+
+
+def board_entity(hass, entry, dSEntityType):
+    devices = hass.data[DOMAIN][entry.entry_id]["devices"]
+    return devices.get(MAC, {}).get("dscriptmodule_" + MAC.replace(":", "") + "_" + dSEntityType + "1")
+
+
+async def test_status_page_feeds_diagnostic_sensors(hass: HomeAssistant, fake_board, aioclient_mock) -> None:
+    aioclient_mock.get("http://" + BOARD_IP + "/status.htm", text=STATUS_PAGE)
+    registry = er.async_get(hass)
+    entry, port = await setup_entry(hass)
+    # diagnostic sensors are disabled by default - enable temperature and load before they are created
+    for sensor in ("sensor_temperature", "sensor_load"):
+        registry.async_get_or_create("sensor", DOMAIN, "dscriptmodule_" + MAC.replace(":", "") + "_" + sensor + "1", config_entry=entry)
+
+    await fake_board.trigger(port, bytes([0, 0, 255]))
+    assert await wait_for(lambda: board_entity(hass, entry, "sensor_board") is not None)
+    await hass.async_block_till_done()
+
+    requests_before = len(fake_board.requests)
+    await board_entity(hass, entry, "sensor_board").async_local_poll()
+    await hass.async_block_till_done()
+
+    temperature = board_entity(hass, entry, "sensor_temperature").entity_id
+    load = board_entity(hass, entry, "sensor_load").entity_id
+    assert hass.states.get(temperature).state == "26.7"
+    assert hass.states.get(load).state == "1500"
+    assert hass.states.get(load).attributes["last_second"] == 1200
+    assert board_entity(hass, entry, "sensor_board")._board._StatusPageSupported is True
+    assert len(fake_board.requests) == requests_before, "status.htm replaces the extra GetStatus connection"
+
+    voltage = registry.async_get_entity_id("sensor", DOMAIN, "dscriptmodule_" + MAC.replace(":", "") + "_sensor_voltage1")
+    voltage_entry = registry.async_get(voltage)
+    assert voltage_entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+    assert voltage_entry.entity_category == "diagnostic"
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+async def test_older_firmware_without_status_page(hass: HomeAssistant, fake_board, aioclient_mock) -> None:
+    aioclient_mock.get("http://" + BOARD_IP + "/status.htm", status=404)
+    aioclient_mock.get("http://" + BOARD_IP + "/index.htm", text="<html></html>")
+    entry, port = await setup_entry(hass)
+    await fake_board.trigger(port, bytes([0, 0, 255]))
+    assert await wait_for(lambda: board_entity(hass, entry, "sensor_board") is not None)
+    await hass.async_block_till_done()
+
+    board_sensor = board_entity(hass, entry, "sensor_board")
+    requests_before = len(fake_board.requests)
+    await board_sensor.async_local_poll()
+    await hass.async_block_till_done()
+
+    assert board_sensor._board._StatusPageSupported is False
+    assert hass.states.get(board_sensor.entity_id).state == "200"
+    assert any(r[0] == 0x30 for r in fake_board.requests[requests_before:]), "temperature/voltage still come from GetStatus"
+    assert board_sensor._board._InstrPerSecMax is None
+
+    calls = aioclient_mock.call_count
+    await board_sensor.async_local_poll()  # status.htm is not requested again on every poll
+    assert aioclient_mock.call_count == calls + 1
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()

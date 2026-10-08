@@ -150,6 +150,9 @@ class dScriptBoardHA(dScriptBoard):
     friendlyname = None
     MACAddress = '00:00:00:00:00:00'
     _ConnectedBoardSensors = 1 #set this fixed to 1 as we have a single board status sensor implemented in HA
+    _InstrPerSec = None #dScript instructions per second (last second) - firmware >= 3.9 via status.htm only
+    _InstrPerSecMax = None #maximum of _InstrPerSec within the last minute
+    _StatusPageSupported = None #None = unknown, True = status.htm available (firmware >= 3.9), False = older firmware
     
     def __init__(self, entry_id: str, tcp_ip, tcp_port=DEFAULT_PORT, protocol=DEFAULT_PROTOCOL, aeskey=DEFAULT_AESKEY):
         """Initialize the object."""
@@ -219,6 +222,28 @@ class dScriptBoardHA(dScriptBoard):
             self._HostName, self.IP, self._SystemFirmwareMajor, self._SystemFirmwareMinor, 
             self._ApplicationFirmwareMajor, self._ApplicationFirmwareMinor, self._CustomFirmeware, self.MACAddress, self.IP, self._Protocol)
         self.available = True
+        return True
+
+
+    def update_from_status_page(self, text) -> bool:
+        """Take over the values of the board page status.htm (key=value lines, firmware >= 3.9)"""
+        try:
+            values = {}
+            for line in str(text).splitlines():
+                key, sep, value = line.strip().partition('=')
+                if sep:
+                    values[key.strip()] = value.strip()
+            temperature = int(values['temperature'])
+            voltage = int(values['voltage'])
+            instr = int(values['instr_per_sec'])
+            instr_max = int(values['instr_per_sec_max'])
+        except (KeyError, ValueError) as e:
+            _LOGGER.debug("%s - %s: dScriptBoardHA update_from_status_page: unexpected content: %s (%s.%s)", self._HostName, self.IP, str(e), e.__class__.__module__, type(e).__name__)
+            return False
+        self._Temperature = temperature / 10.0
+        self._Volts = voltage / 10.0
+        self._InstrPerSec = instr
+        self._InstrPerSecMax = instr_max
         return True
 
 
