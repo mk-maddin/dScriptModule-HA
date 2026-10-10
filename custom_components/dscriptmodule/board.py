@@ -55,6 +55,8 @@ async def async_setup_dScriptBoard(hass: HomeAssistant, entry: ConfigEntry, tcp_
             _LOGGER.debug("%s - %s: async_setup_dScriptBoard: board already exists: %s", entry.entry_id, tcp_ip, existing.name)
             existing.IP = dSBoard.IP
             existing.available = True
+            entry_data[KNOWN_DATA].setdefault(existing.MACAddress, {})
+            entry_data[KNOWN_DATA][existing.MACAddress][CONF_IP_ADDRESS] = dSBoard.IP # used on the next start
             return None
 
         _LOGGER.debug("%s - %s: async_setup_dScriptBoard: merge known data for: %s", entry.entry_id, tcp_ip, dSBoard.MACAddress)

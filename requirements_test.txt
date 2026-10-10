@@ -1,4 +1,4 @@
 pytest-homeassistant-custom-component==0.13.316  # Home Assistant 2026.2.3
-dScriptModule>=3.5.0
+dScriptModule>=3.5.2  # keep in sync with manifest.json
 getmac>=0.9.2
 aiofiles>=23.2.1

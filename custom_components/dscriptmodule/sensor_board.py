@@ -51,19 +51,26 @@ class dScriptBoardSensor(dScriptPlatformEntity):
     
     _icon = 'mdi:developer-board'
     _platform = PLATFORM
-    _onlineurl = STATE_UNKNOWN
-    _configurl = STATE_UNKNOWN   
     _NoGetUpdateCounter = 999
-    _statusurl = STATE_UNKNOWN
     _StatusPageRetryCounter = 0
     _StatusPageRetryPolls = 20 #polls until status.htm is tried again on a board without it (firmware update)
 
     def _init_platform_specific(self, **kwargs):
         """Platform specific init actions"""
         _LOGGER.debug("%s - %s %s%s: _init_platform_specific", self._entry_id, self._board.name, self._dSEntityType, self._identifier)
-        self._onlineurl= "http://" + self._board.IP + "/index.htm"
-        self._statusurl= "http://" + self._board.IP + "/status.htm"
-        self._configurl= "http://" + self._board.IP + "/_config.htm"
+
+    # the URLs are built from the current IP - it is updated when a known board shows up with a new IP (DHCP)
+    @property
+    def _onlineurl(self) -> str:
+        return "http://" + str(self._board.IP) + "/index.htm"
+
+    @property
+    def _statusurl(self) -> str:
+        return "http://" + str(self._board.IP) + "/status.htm"
+
+    @property
+    def _configurl(self) -> str:
+        return "http://" + str(self._board.IP) + "/_config.htm"
 
 #    def _state_post_process(self, state):
 #        """Platform specific state post processing"""
@@ -86,7 +93,7 @@ class dScriptBoardSensor(dScriptPlatformEntity):
     def available(self) -> bool:
         """Return True if entity is available."""
         #_LOGGER.debug("%s - %s.%s: available", self._entry_id, self._board.name, self.uniqueid)
-        if self._onlineurl is STATE_UNKNOWN:
+        if not self._board.IP:
             return False
         return True
 

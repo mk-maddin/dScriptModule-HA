@@ -10,7 +10,10 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.dscriptmodule.const import CONF_AESKEY, CONF_LISTENIP, CONF_SERVER, CONF_PYOJBECT, DOMAIN
 
-from .conftest import BOARD_IP, free_port
+from custom_components.dscriptmodule.board import async_setup_dScriptBoard
+from custom_components.dscriptmodule.const import KNOWN_DATA
+
+from .conftest import BOARD_IP, BOARD_IP_NEW, NO_BOARD_IP, FakeBoard, free_port
 
 pytestmark = pytest.mark.usefixtures("socket_enabled")
 
@@ -19,7 +22,7 @@ pytestmark = pytest.mark.usefixtures("socket_enabled")
 def allow_board_ip(socket_enabled):
     """The emulated board listens on BOARD_IP - allow connections to it."""
     import pytest_socket
-    pytest_socket.socket_allow_hosts(["127.0.0.1", BOARD_IP], allow_unix_socket=True)
+    pytest_socket.socket_allow_hosts(["127.0.0.1", BOARD_IP, BOARD_IP_NEW, NO_BOARD_IP], allow_unix_socket=True)
 
 
 async def wait_for(predicate, timeout=15.0):
@@ -184,6 +187,69 @@ async def test_older_firmware_without_status_page(hass: HomeAssistant, fake_boar
     calls = aioclient_mock.call_count
     await board_sensor.async_local_poll()  # status.htm is not requested again on every poll
     assert aioclient_mock.call_count == calls + 1
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+async def test_unreachable_board_is_not_set_up(hass: HomeAssistant) -> None:
+    entry, port = await setup_entry(hass)
+    await async_setup_dScriptBoard(hass, entry, NO_BOARD_IP)
+    await hass.async_block_till_done()
+    devices = hass.data[DOMAIN][entry.entry_id]["devices"]
+    assert devices == {}, "no board object (former MAC 00:00:00:00:00:00 entry)"
+    assert hass.data[DOMAIN][entry.entry_id][KNOWN_DATA] == {}
+    assert light_entity_ids(hass) == []
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+async def test_known_board_with_new_ip_keeps_its_object(hass: HomeAssistant, fake_board) -> None:
+    entry, port = await setup_entry(hass)
+    await fake_board.trigger(port, bytes([0, 0, 255]))
+    assert await wait_for(lambda: len(light_entity_ids(hass)) == 2)
+    await hass.async_block_till_done()
+    board = hass.data[DOMAIN][entry.entry_id]["devices"][MAC]["pyobj"]
+    board_sensor = board_entity(hass, entry, "sensor_board")
+
+    moved = await FakeBoard(BOARD_IP_NEW).start()  # same MAC, new IP (DHCP)
+    try:
+        await moved.trigger(port, bytes([0, 0, 255]))
+        assert await wait_for(lambda: board.IP == BOARD_IP_NEW)
+        await hass.async_block_till_done()
+    finally:
+        await moved.stop()
+
+    assert hass.data[DOMAIN][entry.entry_id]["devices"][MAC]["pyobj"] is board, "entities keep referencing the same object"
+    assert hass.data[DOMAIN][entry.entry_id][KNOWN_DATA][MAC]["ip_address"] == BOARD_IP_NEW
+    assert board_sensor._statusurl == "http://" + BOARD_IP_NEW + "/status.htm"
+    assert board_sensor._onlineurl == "http://" + BOARD_IP_NEW + "/index.htm"
+    assert len(light_entity_ids(hass)) == 2
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+async def test_same_button_click_count_twice_changes_state(hass: HomeAssistant, fake_board) -> None:
+    entry, port = await setup_entry(hass)
+    await fake_board.trigger(port, bytes([0, 0, 255]))
+    assert await wait_for(lambda: board_entity(hass, entry, "sensor_button") is not None)
+    await hass.async_block_till_done()
+    button = board_entity(hass, entry, "sensor_button").entity_id
+
+    states = []
+    def changed(event):
+        if event.data.get("entity_id") == button and event.data.get("new_state") is not None:
+            states.append(event.data["new_state"].state)
+    unsub = hass.bus.async_listen("state_changed", changed)
+
+    for _ in range(2):  # 2 clicks, twice in a row
+        await fake_board.trigger(port, bytes([85, 1, 2]))
+        assert await wait_for(lambda: states.count("2") >= _ + 1)
+        await hass.async_block_till_done()
+    unsub()
+    assert states.count("2") == 2, states
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
