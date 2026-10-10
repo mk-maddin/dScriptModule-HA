@@ -1,0 +1,17 @@
+The brand assets in this directory, including the dScript 
+logo and related artwork, are not covered by the
+Apache License 2.0 applicable to the source code of this project.
+
+dScript and associated logos are trademarks and/or
+copyrighted materials of Devantech Ltd. and/or
+its affiliates.
+
+No license to these trademarks or copyrighted materials is
+granted by this repository.
+
+The brand assets are included solely for identification of
+compatible dScript products.
+
+This project is an independent, unofficial Home Assistant
+integration and is not affiliated with, endorsed by, or
+sponsored by Devantech Ltd..
