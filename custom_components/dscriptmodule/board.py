@@ -46,8 +46,15 @@ async def async_setup_dScriptBoard(hass: HomeAssistant, entry: ConfigEntry, tcp_
         # board init does blocking network I/O (DNS + GetStatus + GetConfig) - never run it inside the event loop
         dSBoard = await hass.async_add_executor_job(dScriptBoardHA, entry.entry_id, tcp_ip, tcp_port, protocol, aeskey)
         entry_data=hass.data[DOMAIN][entry.entry_id]
-        if not entry_data[KNOWN_DATA].get(dSBoard.MACAddress, None) is None and not entry_data[KNOWN_DATA][dSBoard.MACAddress].get(CONF_PYOJBECT, None) is None:
-            _LOGGER.warning("%s - %s: async_setup_dScriptBoard: board already exists: %s", entry.entry_id, tcp_ip, dSBoard.name)
+        if not dSBoard.available: # unreachable boards have no MAC / config yet - they are set up with their next heartbeat
+            _LOGGER.warning("%s - %s: async_setup_dScriptBoard: board not reachable - wait for its next heartbeat", entry.entry_id, tcp_ip)
+            return None
+        entry_data.setdefault(CONF_DEVICES, {})
+        existing = entry_data[CONF_DEVICES].get(dSBoard.MACAddress, {}).get(CONF_PYOJBECT, None)
+        if not existing is None: # keep the existing object - the entities reference it
+            _LOGGER.debug("%s - %s: async_setup_dScriptBoard: board already exists: %s", entry.entry_id, tcp_ip, existing.name)
+            existing.IP = dSBoard.IP
+            existing.available = True
             return None
 
         _LOGGER.debug("%s - %s: async_setup_dScriptBoard: merge known data for: %s", entry.entry_id, tcp_ip, dSBoard.MACAddress)
@@ -159,6 +166,7 @@ class dScriptBoardHA(dScriptBoard):
         try:
             _LOGGER.debug("%s - %s: dScriptBoardHA __init__: prepare", entry_id, tcp_ip)
             super().__init__(TCP_IP=tcp_ip, TCP_PORT=tcp_port, PROTOCOL=protocol)
+            self.ConnectionTimeout = 5 # seconds - a board in the local network answers within milliseconds
             if len(aeskey) > 0:
                 self.SetAESKey(aeskey)
         except Exception as e:

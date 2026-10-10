@@ -52,6 +52,9 @@ class dScriptButtonSensor(dScriptPlatformEntity):
             state = await self._board.async_GetButton(self._identifier)
             #state = await self.hass.async_add_executor_job(self._board.GetButton, self._identifier)
             #_LOGGER.debug("%s - %s.%s: async_local_poll state received: %s", self._entry_id, self._board.name, self.uniqueid, state)
+            if state is None: # board did not answer - keep the last known state
+                _LOGGER.debug("%s - %s.%s: async_local_poll: no answer from board", self._entry_id, self._board.name, self.uniqueid)
+                return
             self._state = state
             self.async_write_ha_state()
             _LOGGER.debug("%s - %s.%s: async_local_poll complete: %s", self._entry_id, self._board.name, self.uniqueid, state) 
@@ -68,11 +71,16 @@ class dScriptButtonSensor(dScriptPlatformEntity):
             #_LOGGER.debug("%s - %s.%s: async_local_push: %s", self._entry_id, self._board.name, self.uniqueid, state) 
             if not state is None:
                 state = self._state_post_process(state)
+                if str(self._state) == str(state): # same value again - force a state change so automations trigger
+                    self._state = 0
+                    self.async_write_ha_state()
                 self._state = state
                 self.async_write_ha_state()
                 _LOGGER.debug("%s - %s.%s: async_local_push complete: %s", self._entry_id, self._board.name, self.uniqueid, state)
                 # still need to execute a poll as firmware does not reset the internal value without it :(
-                state = await self._board.async_GetButton(self._identifier)
+                if await self._board.async_GetButton(self._identifier) is None:
+                    await asyncio.sleep(1)
+                    await self._board.async_GetButton(self._identifier)
                 #state = await self.hass.async_add_executor_job(self._board.GetButton, self._identifier)
             else:
                 await self.hass.async_create_task(self.async_local_poll())

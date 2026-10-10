@@ -120,13 +120,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     try:
         _LOGGER.debug("Unloading config entry: %s", entry.entry_id)
-        all_ok = True
-        for platform in DSCRIPT_TOPICTOENTITYTYPE.values():
-            _LOGGER.debug("%s - async_unload_entry: unload platform: %s", entry.entry_id, platform)
-            platform_ok = await asyncio.gather(*[hass.config_entries.async_forward_entry_unload(entry, platform)])
-            if not platform_ok:
-                _LOGGER.error("%s - async_unload_entry: failed to unload: %s (%s)", entry.entry_id, platform, platform_ok)
-                all_ok = platform_ok
+        platforms = sorted(set(p.split("_")[0] for p in DSCRIPT_TOPICTOENTITYTYPE.values())) # e.g. sensor_button -> sensor
+        _LOGGER.debug("%s - async_unload_entry: unload platforms: %s", entry.entry_id, platforms)
+        all_ok = await hass.config_entries.async_unload_platforms(entry, platforms)
+        if not all_ok:
+            _LOGGER.error("%s - async_unload_entry: failed to unload platforms: %s", entry.entry_id, platforms)
 
         entry_data=hass.data[DOMAIN][entry.entry_id]
         if CONF_PYOJBECT in entry_data[CONF_SERVER] and not entry_data[CONF_SERVER].get(CONF_PYOJBECT, None) is None:
