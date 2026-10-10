@@ -141,7 +141,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             hass.data[DOMAIN][entry.entry_id].pop(CONF_ADD_ENTITIES)
 
         if all_ok:
-            _LOGGER.debug("%s - async_unload_entry: Unload option updates listener: %s.%s ", entry.entry_id, FUNC_OPTION_UPDATES)
+            _LOGGER.debug("%s - async_unload_entry: Unload option updates listener: %s", entry.entry_id, FUNC_OPTION_UPDATES)
             hass.data[DOMAIN][entry.entry_id][FUNC_OPTION_UPDATES]()
             _LOGGER.debug("%s - async_unload_entry: Remove data store: %s.%s ", entry.entry_id, DOMAIN, entry.entry_id)
             hass.data[DOMAIN].pop(entry.entry_id)

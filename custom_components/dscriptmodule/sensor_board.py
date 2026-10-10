@@ -4,17 +4,16 @@ from __future__ import annotations
 from typing import Final
 import logging
 import asyncio
-import urllib.request
-import socket
+import aiohttp
 
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.const import (
     ATTR_MODEL,
-    ATTR_VOLTAGE,
-    ATTR_TEMPERATURE,
     ATTR_DEVICE_ID,
     ATTR_SW_VERSION,
     CONF_UNIQUE_ID,    
@@ -31,6 +30,7 @@ from .const import(
     CATTR_PROTOCOL,
     CATTR_SW_TYPE,
     DOMAIN,
+    SIGNAL_BOARD_STATUS,
 )
 
 from .utils import(
@@ -51,18 +51,18 @@ class dScriptBoardSensor(dScriptPlatformEntity):
     
     _icon = 'mdi:developer-board'
     _platform = PLATFORM
-    _firmware = STATE_UNKNOWN
-    _software = STATE_UNKNOWN
     _onlineurl = STATE_UNKNOWN
     _configurl = STATE_UNKNOWN   
     _NoGetUpdateCounter = 999
+    _statusurl = STATE_UNKNOWN
+    _StatusPageRetryCounter = 0
+    _StatusPageRetryPolls = 20 #polls until status.htm is tried again on a board without it (firmware update)
 
     def _init_platform_specific(self, **kwargs):
         """Platform specific init actions"""
         _LOGGER.debug("%s - %s %s%s: _init_platform_specific", self._entry_id, self._board.name, self._dSEntityType, self._identifier)
-        self._firmware = str(self._board._SystemFirmwareMajor) + "." + str(self._board._SystemFirmwareMinor)
-        self._software = str(self._board._ApplicationFirmwareMajor) + "." + str(self._board._ApplicationFirmwareMinor)
         self._onlineurl= "http://" + self._board.IP + "/index.htm"
+        self._statusurl= "http://" + self._board.IP + "/status.htm"
         self._configurl= "http://" + self._board.IP + "/_config.htm"
 
 #    def _state_post_process(self, state):
@@ -74,11 +74,9 @@ class dScriptBoardSensor(dScriptPlatformEntity):
         """Return the state attributes of the sensor."""
         return {
             ATTR_MODEL: self._board._ModuleID,
-            ATTR_VOLTAGE: self._board._Volts,
-            ATTR_TEMPERATURE: self._board._Temperature,
             ATTR_DEVICE_ID: self._board.MACAddress,
-            ATTR_SW_VERSION: self._software,
-            CATTR_FW_VERSION: self._firmware,
+            ATTR_SW_VERSION: str(self._board._ApplicationFirmwareMajor) + "." + str(self._board._ApplicationFirmwareMinor), # read live - changes after a firmware update
+            CATTR_FW_VERSION: str(self._board._SystemFirmwareMajor) + "." + str(self._board._SystemFirmwareMinor),
             CATTR_IP_ADDRESS: self._board.IP,
             CATTR_SW_TYPE: self._board._CustomFirmeware,
             CATTR_PROTOCOL: self._board._Protocol
@@ -102,23 +100,44 @@ class dScriptBoardSensor(dScriptPlatformEntity):
         """Async: Poll the latest status from device"""
         try:
             _LOGGER.debug("%s - %s.%s: async_local_poll", self._entry_id, self._board.name, self.uniqueid)         
-            state = await self.hass.async_add_executor_job(urllib.request.urlopen,self._onlineurl)
-            state = state.getcode()
-            if self._NoGetUpdateCounter >= 10:
-                self._NoGetUpdateCounter = 0
-                await self._board.async_GetStatus()
-                #await self.hass.async_add_executor_job(self._board.GetStatus)
-            else: self._NoGetUpdateCounter += 1
-        except urllib.error.URLError:       state = 404
-        except socket.timeout:              state = 408
-        except OSError:                     state = 113
-        except urllib.error.HTTPError as e: state = e.code
+            session = async_get_clientsession(self.hass)
+            state = None
+            if self._board._StatusPageSupported is not False or self._StatusPageRetryCounter >= self._StatusPageRetryPolls:
+                # firmware >= 3.9: small page with temperature, voltage and load - no extra GetStatus connection needed
+                self._StatusPageRetryCounter = 0
+                async with session.get(self._statusurl, timeout=aiohttp.ClientTimeout(total=10)) as response: # always closes the connection to the board
+                    state = response.status
+                    text = await response.text(errors='replace')
+                if state == 200:
+                    self._board._StatusPageSupported = self._board.update_from_status_page(text)
+                elif state == 404:
+                    _LOGGER.debug("%s - %s: async_local_poll: no status.htm (firmware < 3.9) - using index.htm", self._board.friendlyname, self._name)
+                    self._board._StatusPageSupported = False
+                    state = None
+            else:
+                self._StatusPageRetryCounter += 1
+            if state is None:
+                async with session.get(self._onlineurl, timeout=aiohttp.ClientTimeout(total=10)) as response: # always closes the connection to the board
+                    state = response.status
+                    await response.read()
+            if not self._board._StatusPageSupported:
+                if self._NoGetUpdateCounter >= 10:
+                    self._NoGetUpdateCounter = 0
+                    await self._board.async_GetStatus()
+                    #await self.hass.async_add_executor_job(self._board.GetStatus)
+                else: self._NoGetUpdateCounter += 1
+            async_dispatcher_send(self.hass, SIGNAL_BOARD_STATUS.format(self._board.MACAddress))
+        except asyncio.TimeoutError:                state = 408
+        except aiohttp.ClientResponseError as e:    state = e.status
+        except aiohttp.ClientConnectionError:       state = 113
+        except aiohttp.ClientError:                 state = 404
+        except OSError:                             state = 113
         except Exception as e:
             _LOGGER.error("%s - %s.%s: async_local_poll failed: %s (%s.%s)", self._entry_id, self._board.name, self.uniqueid, str(e), e.__class__.__module__, type(e).__name__)
             return None
         try:
-            if not state == 200 and self._board.available == True: self._board.check_available()
-            elif state == 200 and self._board.available == False: self._board.check_available()
+            if not state == 200 and self._board.available == True: await self._board.async_check_available()
+            elif state == 200 and self._board.available == False: await self._board.async_check_available()
             else:
                 _LOGGER.debug("%s - %s: async_local_poll board available unchanged: %s", self._board.friendlyname, self._name, self._board.available)
             self._state = str(state)

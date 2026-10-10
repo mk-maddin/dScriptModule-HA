@@ -97,12 +97,12 @@ async def async_service_HeartbeatKnownBoards(hass: HomeAssistant, call) -> None 
             return False
 
         for board_entry in list(entry_data.get(KNOWN_DATA, [])):
-            _LOGGER.debug("%s - async_service_HeartbeatKnownBoards: processing board entry: %s ", call, DOMAIN, board_entry)
+            _LOGGER.debug("%s - %s: async_service_HeartbeatKnownBoards: processing board entry: %s", DOMAIN, call, board_entry)
             board_entry = entry_data[KNOWN_DATA][board_entry]
             ip_address = board_entry.get(CONF_IP_ADDRESS, None)
             if ip_address is None: continue
             
-            _LOGGER.debug("%s - async_service_HeartbeatKnownBoards: processing board entry: %s ", call, DOMAIN, ip_address)
+            _LOGGER.debug("%s - %s: async_service_HeartbeatKnownBoards: heartbeat board IP: %s", DOMAIN, call, ip_address)
             sender = DummySender(ip_address)
             await BuiltInServer.async_dSBoardHeartbeat(sender, 'service_heartbeat')
             #hass.async_create_task(async_setup_dScriptBoard(hass, entry, ip_address))

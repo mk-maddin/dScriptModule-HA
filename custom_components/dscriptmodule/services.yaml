@@ -1,4 +1,4 @@
-# Describes the format for available HomeKit services
+# Describes the format for available dscriptmodule services
 
 serverstop:
   name: Stop dScriptServer 
@@ -10,7 +10,7 @@ serverstart:
 
 updatebutton:
   name: Update dScriptButton
-  dscription: Trigger update of virtual Button entity from dScriptBoard
+  description: Trigger update of virtual Button entity from dScriptBoard
   fields:
     entity_id:
       name: Entity
@@ -20,12 +20,12 @@ updatebutton:
         - sensor.ds_speis_button1
       selector:
         entity:
-          integration: sensor
-          domain: dscriptmodule 
+          integration: dscriptmodule
+          domain: sensor
 
 heartbeatknownboards:
   name: Hearbeat KnownBoards
-  dscription: Trigger heartbeat to each known/cached dScriptBoard
+  description: Trigger heartbeat to each known/cached dScriptBoard
   fields:
     entry_id:
       name: Config entry ID

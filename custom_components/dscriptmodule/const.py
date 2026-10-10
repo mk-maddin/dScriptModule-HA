@@ -39,7 +39,10 @@ DSCRIPT_TOPICTOENTITYTYPE: Final = {
     "getshutter": "cover",
     "getmotion": "sensor_motion",
     "getbutton": "sensor_button",
-    "getboard_dummy": "sensor_board"
+    "getboard_dummy": "sensor_board",
+    "getboardtemperature_dummy": "sensor_temperature",
+    "getboardvoltage_dummy": "sensor_voltage",
+    "getboardload_dummy": "sensor_load"
 }
 
 DSCRIPT_ENTITYTYPETOCOUNTATTR: Final = {
@@ -49,5 +52,10 @@ DSCRIPT_ENTITYTYPETOCOUNTATTR: Final = {
     "cover":  "_ConnectedShutters",
     "sensor_motion": "_ConnectedMotionSensors",
     "sensor_button": "_ConnectedButtons",
-    "sensor_board": "_ConnectedBoardSensors"
+    "sensor_board": "_ConnectedBoardSensors",
+    "sensor_temperature": "_ConnectedBoardSensors",
+    "sensor_voltage": "_ConnectedBoardSensors",
+    "sensor_load": "_ConnectedBoardSensors"
 }
+
+SIGNAL_BOARD_STATUS: Final = DOMAIN + "_board_status_{}"  # format with board MAC address - sent after new temperature / voltage / load values

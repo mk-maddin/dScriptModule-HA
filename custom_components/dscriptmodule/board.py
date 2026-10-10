@@ -30,6 +30,7 @@ from .entities import (
     create_entity_unique_id
 )
 from .utils import (
+    async_dScript_GetEntityByUniqueID,
     async_dScript_setup_entry,
     ProgrammingDebug,
     async_ProgrammingDebug,
@@ -42,7 +43,8 @@ async def async_setup_dScriptBoard(hass: HomeAssistant, entry: ConfigEntry, tcp_
     """Set up a new dScriptBoard."""
     try:
         _LOGGER.debug("%s - %s: async_setup_dScriptBoard: setup board", entry.entry_id, tcp_ip)
-        dSBoard = dScriptBoardHA(entry.entry_id, tcp_ip, tcp_port, protocol, aeskey)
+        # board init does blocking network I/O (DNS + GetStatus + GetConfig) - never run it inside the event loop
+        dSBoard = await hass.async_add_executor_job(dScriptBoardHA, entry.entry_id, tcp_ip, tcp_port, protocol, aeskey)
         entry_data=hass.data[DOMAIN][entry.entry_id]
         if not entry_data[KNOWN_DATA].get(dSBoard.MACAddress, None) is None and not entry_data[KNOWN_DATA][dSBoard.MACAddress].get(CONF_PYOJBECT, None) is None:
             _LOGGER.warning("%s - %s: async_setup_dScriptBoard: board already exists: %s", entry.entry_id, tcp_ip, dSBoard.name)
@@ -102,7 +104,7 @@ async def async_dScript_ValidateBoardConfig(hass: HomeAssistant, entry: ConfigEn
                 elif counts_pre[platform] > count_post:
                     for identifier in list(range(int(count_post)+1,int(counts_pre[platform])+1)):
                         uniqueid = create_entity_unique_id(dSBoard, identifier, platform)
-                        entity_object = async_dScript_GetEntityByUniqueID(hass, entry.entry_id, uniqueid, dSBoard.MACAddress)
+                        entity_object = await async_dScript_GetEntityByUniqueID(hass, entry.entry_id, uniqueid, dSBoard.MACAddress)
                         if entity_object is None:
                             _LOGGER.warning("%s - %s: async_dScript_ValidateBoardConfig: unable to find remove entity: %s", entry.entry_id, dSBoard.name, uniqueid)
                             continue
@@ -148,6 +150,9 @@ class dScriptBoardHA(dScriptBoard):
     friendlyname = None
     MACAddress = '00:00:00:00:00:00'
     _ConnectedBoardSensors = 1 #set this fixed to 1 as we have a single board status sensor implemented in HA
+    _InstrPerSec = None #dScript instructions per second (last second) - firmware >= 3.9 via status.htm only
+    _InstrPerSecMax = None #maximum of _InstrPerSec within the last minute
+    _StatusPageSupported = None #None = unknown, True = status.htm available (firmware >= 3.9), False = older firmware
     
     def __init__(self, entry_id: str, tcp_ip, tcp_port=DEFAULT_PORT, protocol=DEFAULT_PROTOCOL, aeskey=DEFAULT_AESKEY):
         """Initialize the object."""
@@ -166,8 +171,10 @@ class dScriptBoardHA(dScriptBoard):
 
 
     def check_available(self):
+        """Blocking availability check - only call from an executor thread"""
         try:
             _LOGGER.debug("%s - %s: dScriptBoardHA check_available: connect", self._HostName, self.IP)
+            self._SystemFirmwareMajor = 0 #reset to detect a board which is no longer reachable
             self.InitBoard()
             if self._SystemFirmwareMajor == 0: #no firmware data means not connected
                 _LOGGER.error("%s - %s: dScriptBoardHA check_available: not connected", self._HostName, self.IP)
@@ -177,7 +184,31 @@ class dScriptBoardHA(dScriptBoard):
             _LOGGER.error("%s - %s: dScriptBoardHA check_available: connect failed: %s (%s.%s)", self._HostName, self.IP, str(e), e.__class__.__module__, type(e).__name__)
             self.available = False
             return False
+        return self._check_available_post_process()
 
+
+    async def async_check_available(self, full=True):
+        """Async availability check - full=False only checks GetStatus (lightweight, used for heartbeats)"""
+        try:
+            _LOGGER.debug("%s - %s: dScriptBoardHA async_check_available: connect (full: %s)", self._HostName, self.IP, full)
+            self._SystemFirmwareMajor = 0 #reset to detect a board which is no longer reachable
+            if full:
+                await self.async_InitBoard()
+            else:
+                await self.async_GetStatus()
+            if self._SystemFirmwareMajor == 0: #no firmware data means not connected
+                _LOGGER.error("%s - %s: dScriptBoardHA async_check_available: not connected", self._HostName, self.IP)
+                self.available = False
+                return False 
+        except Exception as e:
+            _LOGGER.error("%s - %s: dScriptBoardHA async_check_available: connect failed: %s (%s.%s)", self._HostName, self.IP, str(e), e.__class__.__module__, type(e).__name__)
+            self.available = False
+            return False
+        return self._check_available_post_process()
+
+
+    def _check_available_post_process(self):
+        """Post-process board data after a successful connection"""
         try:
             _LOGGER.debug("%s - %s: dScriptBoardHA check_available: post-process", self._HostName, self.IP)
             self.MACAddress = str(self._MACAddress)
@@ -188,9 +219,36 @@ class dScriptBoardHA(dScriptBoard):
             return False
 
         _LOGGER.debug("%s - %s: dScriptBoardHA check_available complete: FW: %s.%s | App: %s.%s | Custom: %s | MAC: %s | IP: %s | Prot: %s", 
-            self._HostName, self._SystemFirmwareMajor, self._SystemFirmwareMinor, 
+            self._HostName, self.IP, self._SystemFirmwareMajor, self._SystemFirmwareMinor, 
             self._ApplicationFirmwareMajor, self._ApplicationFirmwareMinor, self._CustomFirmeware, self.MACAddress, self.IP, self._Protocol)
         self.available = True
+        return True
+
+
+    def update_from_status_page(self, text) -> bool:
+        """Take over the values of the board page status.htm (key=value lines, firmware >= 3.9)"""
+        try:
+            values = {}
+            for line in str(text).splitlines():
+                key, sep, value = line.strip().partition('=')
+                if sep:
+                    values[key.strip()] = value.strip()
+            temperature = int(values['temperature'])
+            voltage = int(values['voltage'])
+            instr = int(values['instr_per_sec'])
+            instr_max = int(values['instr_per_sec_max'])
+        except (KeyError, ValueError) as e:
+            _LOGGER.debug("%s - %s: dScriptBoardHA update_from_status_page: unexpected content: %s (%s.%s)", self._HostName, self.IP, str(e), e.__class__.__module__, type(e).__name__)
+            return False
+        app_major, sep, app_minor = values.get('app', '').partition('.')
+        if sep and app_major.isdigit() and app_minor.isdigit(): # keep the version current like the former GetStatus every 10th poll did
+            self._ApplicationFirmwareMajor = int(app_major)
+            self._ApplicationFirmwareMinor = int(app_minor)
+        self._Temperature = temperature / 10.0
+        self._Volts = voltage / 10.0
+        self._InstrPerSec = instr
+        self._InstrPerSecMax = instr_max
+        return True
 
 
     def _cleanup_macaddress(self):

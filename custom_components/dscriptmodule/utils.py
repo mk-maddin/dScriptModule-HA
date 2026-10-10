@@ -155,6 +155,7 @@ async def async_dScript_setup_entry(hass: HomeAssistant, entry: ConfigEntry, asy
     from .sensor_board import dScriptBoardSensor
     from .sensor_button import dScriptButtonSensor
     from .sensor_motion import dScriptMotionSensor
+    from .sensor_diagnostic import dScriptLoadSensor, dScriptTemperatureSensor, dScriptVoltageSensor
     
     DSCRIPT_ENTITYTYPETOOBJECT: Final = {
         "light": dScriptLight,
@@ -163,7 +164,10 @@ async def async_dScript_setup_entry(hass: HomeAssistant, entry: ConfigEntry, asy
         "cover":  dScriptCover,
         "sensor_motion": dScriptMotionSensor,
         "sensor_button": dScriptButtonSensor,
-        "sensor_board": dScriptBoardSensor
+        "sensor_board": dScriptBoardSensor,
+        "sensor_temperature": dScriptTemperatureSensor,
+        "sensor_voltage": dScriptVoltageSensor,
+        "sensor_load": dScriptLoadSensor
     }    
 
     try:
